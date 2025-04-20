@@ -313,12 +313,24 @@ class DinoGameDisplay(DisplayPlugin):
         for obstacle in self.obstacles:
             obstacle.draw(self.draw)
         
-        # 绘制分数（右对齐）
-        score_text = self.player + ":" + str(self.score)
-        score_bbox = self.draw.textbbox((0, 0), score_text, font=self.font8)
-        score_width = score_bbox[2] - score_bbox[0]
-        self.draw.text((WIDTH - score_width - 4, 2), score_text, fill=255, font=self.font8)
+        if self.player != "AI":
+            # 绘制分数（右对齐）
+            score_text = str(self.score)
+            score_bbox = self.draw.textbbox((0, 0), score_text, font=self.font8)
+            score_width = score_bbox[2] - score_bbox[0]
+            self.draw.text((WIDTH - score_width - 4, 2), score_text, fill=255, font=self.font8)
         
+        if self.player == "AI":
+            # 计算 GAME OVER 文本的边界框
+            game_over_text = "press to start"
+            text_bbox = self.draw.textbbox((0, 0), game_over_text, font=self.font8)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            # 绘制黑色文本
+            text_x = WIDTH//2 - text_width//2+8
+            text_y = HEIGHT//2 - text_height//2-4
+            self.draw.text((text_x, text_y), game_over_text, fill=255, font=self.font8)
+            
         if self.game_over:
             # 计算 GAME OVER 文本的边界框
             game_over_text = "GAME OVER"
@@ -355,10 +367,10 @@ class DinoGameDisplay(DisplayPlugin):
 
     def key_callback(self, device_name, evt):
         if evt.value == 1:  # key down
-            if evt.code == ecodes.KEY_KP1:
-                self.reset_game("You")
-            elif evt.code == ecodes.KEY_KP2:
-                if self.player == "You":
+            if evt.code == ecodes.KEY_KP1 or evt.code == ecodes.KEY_KP2:
+                if self.player != "You" or self.game_over:
+                    self.reset_game("You")
+                elif self.player == "You":
                     self.dino.jump()
 
     def set_active(self, active):

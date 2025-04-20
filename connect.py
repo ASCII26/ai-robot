@@ -6,16 +6,21 @@ import signal
 from drive import SSD1305
 
 # add screen plugins
+from screen.base import welcome_screen
 from screen.roon import RoonDisplay
 from screen.airplay import AirPlayDisplay
 from screen.clock import ClockDisplay
 from screen.dino import DinoGameDisplay
-from screen.base import welcome_screen
+from screen.life import LifeDisplay
+
 
 # add until plugins
 from until.log import LOGGER
 from until.input import KeyListener,ecodes
 from until.volume import adjust_volume,detect_pcm_controls
+
+# contrast value
+CONTRAST = 128
 
 # add debug information
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -34,21 +39,29 @@ else:
 class DisplayManager:
     def __init__(self):
         """Initialize the display manager"""
+        # init display
         self.disp = SSD1305.SSD1305()
         self.turn_on_screen()
         self.welcome()
         time.sleep(3)
-        self.plugins = []
+        
+        # init variables
+        self.key_listener = KeyListener()
         self.last_active = None
         self.active_id = 0
-        self.key_listener = KeyListener()
+        
+        # init sleep
         self.sleep = False
         self.sleep_time = 10 * 60 # 10 minutes idle time
         self.sleep_count = time.time()
+        self.longpress_count = time.time()
+        self.longpress_time = 3
         
         # initialize plugins
+        self.plugins = []
         self.add_plugin(ClockDisplay, is_player=False)
         self.add_plugin(DinoGameDisplay, is_player=False)
+        self.add_plugin(LifeDisplay, is_player=False)
         self.add_plugin(AirPlayDisplay, is_player=True)
         self.add_plugin(RoonDisplay, is_player=True)
         
@@ -58,14 +71,16 @@ class DisplayManager:
         signal.signal(signal.SIGINT, self.signal_handler)
     
     def add_plugin(self, plugin, is_player=False):
+        id = len(self.plugins)
         plugin_instance = plugin(self, self.disp.width, self.disp.height)
-        plugin_instance.id = len(self.plugins)
+        plugin_instance.id = id
+        
         
         plugin = {
             "plugin": plugin_instance,
             "is_player": is_player,
             "is_active": False,
-            "id": plugin_instance.id
+            "id": id
         }
         self.plugins.append(plugin)
         
@@ -93,12 +108,18 @@ class DisplayManager:
     def key_callback(self, device_name, evt):
         """handle the key event"""
 
+        if evt.value == 2:
+            if evt.code == ecodes.KEY_FORWARD:
+                if time.time() - self.longpress_count > self.longpress_time:
+                    self.turn_off_screen()
+                
         if evt.value == 1:  # key down
             if self.sleep:
                 self.turn_on_screen()
             else:
                 if evt.code == ecodes.KEY_FORWARD:
                     self.active_next()
+                    self.longpress_count = time.time()
                 elif evt.code == ecodes.KEY_VOLUMEUP:
                     adjust_volume("up")
                 elif evt.code == ecodes.KEY_VOLUMEDOWN:
@@ -160,7 +181,7 @@ class DisplayManager:
         self.reset_sleep_timer()
         self.disp.Init()
         self.disp.clear()        
-        self.disp.set_contrast(0) # 128 is the default contrast value
+        self.disp.set_contrast(CONTRAST) # 128 is the default contrast value
         self.disp.set_screen_rotation(1) # 180 degree rotation
         self.sleep = False
         
