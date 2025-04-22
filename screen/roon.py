@@ -7,6 +7,7 @@ from until.log import LOGGER
 from .base import DisplayPlugin
 from .share.component import scroll_text, draw_vu
 from .share.icons import IconDrawer
+from until.input import ecodes
 
 class RoonDisplay(DisplayPlugin):
     def __init__(self, manager, width, height):
@@ -14,6 +15,7 @@ class RoonDisplay(DisplayPlugin):
         super().__init__(manager, width, height)
         
         self.icon_drawer = None
+        self.zone_id = None
         self.current_title = "play next"
         self.current_artist = "show info"
         self.play_state = "pause"
@@ -100,16 +102,21 @@ class RoonDisplay(DisplayPlugin):
                            
                             if "[Muspi]" in zone_name:
                                 play_state = zone["state"]
+                                self.metadata_queue.put(("zone_id", zone_id))
                                 self.metadata_queue.put(("play_state", play_state))
                                 if "now_playing" in zone:
                                     if play_state == "playing":
                                         self.metadata_queue.put(("session_state", True))
 
                                     np = zone["now_playing"]
+                                    self.metadata_queue.put(("seek_position", np["seek_position"]))
+                                    self.metadata_queue.put(("length", np["length"]))
+                                    
                                     if "three_line" in np:
                                         lines = np["three_line"]
                                         self.metadata_queue.put(("title", lines["line1"]))
                                         self.metadata_queue.put(("artist", lines["line2"]))
+                                        self.metadata_queue.put(("album", lines["line3"]))
                                 else:
                                     self.metadata_queue.put(("session_state", False))
                                  
@@ -152,6 +159,10 @@ class RoonDisplay(DisplayPlugin):
                     self.current_title = value
                 elif metadata_type == "artist":
                     self.current_artist = value
+                elif metadata_type == "album":
+                    self.current_album = value
+                elif metadata_type == "zone_id":
+                    self.zone_id = value
                 elif metadata_type == "session_state":
                     if self.is_played_yet == False:
                         self.set_active(value)
@@ -162,9 +173,12 @@ class RoonDisplay(DisplayPlugin):
                     if self.play_state != value:
                         self.last_play_time = time.time()
                     self.play_state = value
-
                 elif metadata_type == "volume":
                     self.volume = value
+                elif metadata_type == "seek_position":
+                    self.seek_position = value
+                elif metadata_type == "length":
+                    self.media_length = value
         except queue.Empty:
             pass
     
@@ -192,10 +206,9 @@ class RoonDisplay(DisplayPlugin):
         
         # draw the scrolling text
         scroll_step = self.get_step_time()
-        if self.current_title and self.current_artist:
-            scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font04b08)
-            scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
-            scroll_text(self.draw, self.current_artist, x=24, y=22, step=scroll_step, font=self.font8)
+        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font04b08)
+        scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
+        scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=22, step=scroll_step, font=self.font8)
         
         ## draw the VU table
         if self.play_state == "playing":
@@ -215,7 +228,19 @@ class RoonDisplay(DisplayPlugin):
         super().set_active(value)
         if value:
             self.last_play_time = time.time()
-        
+            self.manager.key_listener.on(self.key_callback)
+        else:
+            self.manager.key_listener.off(self.key_callback)
+    
+    def key_callback(self, device_name, evt):
+        if evt.value == 1:  # key down
+            if evt.code == ecodes.KEY_KP1 or evt.code == ecodes.KEY_PLAYPAUSE:
+                self.roon.playback_control(self.zone_id, control="playpause")
+            if evt.code == ecodes.KEY_KP2 or evt.code == ecodes.KEY_NEXTSONG:
+                self.roon.playback_control(self.zone_id, control="next")
+            if evt.code == ecodes.KEY_PREVIOUSSONG:   
+                self.roon.playback_control(self.zone_id, control="previous")
+
     def event_listener(self):
         self._read_metadata()
         

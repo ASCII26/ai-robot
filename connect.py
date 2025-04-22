@@ -59,18 +59,18 @@ class DisplayManager:
         
         # initialize plugins
         self.plugins = []
-        self.add_plugin(ClockDisplay, is_player=False)
-        self.add_plugin(DinoGameDisplay, is_player=False)
-        self.add_plugin(LifeDisplay, is_player=False)
-        self.add_plugin(AirPlayDisplay, is_player=True)
-        self.add_plugin(RoonDisplay, is_player=True)
+        self.add_plugin(ClockDisplay, auto_hide=False)
+        self.add_plugin(DinoGameDisplay, auto_hide=False)
+        self.add_plugin(LifeDisplay, auto_hide=False)
+        self.add_plugin(AirPlayDisplay, auto_hide=True)
+        self.add_plugin(RoonDisplay, auto_hide=True)
         
         
         # register signal handler
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
     
-    def add_plugin(self, plugin, is_player=False):
+    def add_plugin(self, plugin, auto_hide=False):
         id = len(self.plugins)
         plugin_instance = plugin(self, self.disp.width, self.disp.height)
         plugin_instance.id = id
@@ -78,7 +78,7 @@ class DisplayManager:
         
         plugin = {
             "plugin": plugin_instance,
-            "is_player": is_player,
+            "auto_hide": auto_hide,
             "is_active": False,
             "id": id
         }
@@ -90,9 +90,9 @@ class DisplayManager:
             self.last_active.set_active(False)
             
         next_id = (self.active_id + 1) % len(self.plugins)
-        LOGGER.info(f"activate next plugin: {not self.plugins[next_id]['plugin'].is_playing()}")    
+
         # 检查下一个插件是否是播放器且未在播放
-        while self.plugins[next_id]["is_player"] and \
+        while self.plugins[next_id]["auto_hide"] and \
               hasattr(self.plugins[next_id]["plugin"], 'is_playing') and \
               not self.plugins[next_id]["plugin"].is_playing():
             next_id = (next_id + 1) % len(self.plugins)
@@ -104,6 +104,7 @@ class DisplayManager:
         print(f"get signal {signum}, cleaning up...")
         self.cleanup()
         sys.exit(0)
+        
 
     def key_callback(self, device_name, evt):
         """handle the key event"""
@@ -120,9 +121,9 @@ class DisplayManager:
                 if evt.code == ecodes.KEY_FORWARD:
                     self.active_next()
                     self.longpress_count = time.time()
-                elif evt.code == ecodes.KEY_VOLUMEUP:
+                if evt.code == ecodes.KEY_VOLUMEUP:
                     adjust_volume("up")
-                elif evt.code == ecodes.KEY_VOLUMEDOWN:
+                if evt.code == ecodes.KEY_VOLUMEDOWN:
                     adjust_volume("down")
 
     def run(self):
