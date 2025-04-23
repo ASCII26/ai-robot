@@ -107,6 +107,7 @@ class RoonDisplay(DisplayPlugin):
                                     for output in outputs:
                                         if "display_name" in output:
                                             zone_name = output["display_name"]
+                                            self.metadata_queue.put(("zone_name", zone_name))
                                         
                                         if "[Muspi]" in zone_name:
                                             play_state = zone["state"]
@@ -165,6 +166,8 @@ class RoonDisplay(DisplayPlugin):
                     self.current_album = value
                 elif metadata_type == "zone_id":
                     self.zone_id = value
+                elif metadata_type == "zone_name":
+                    self.zone_name = value
                 elif metadata_type == "session_state":
                     if self.is_played_yet == False:
                         self.set_active(value)
@@ -199,29 +202,35 @@ class RoonDisplay(DisplayPlugin):
         if is_muted:
             volume = 0
         else:
-            if self.volume["type"] == "number":
+            volume_type = self.volume.get("type", "none")
+            
+            if volume_type == "number":
                 volume = self.volume["value"] / 100
-            elif self.volume["type"] == "db":
+            elif volume_type == "db":
                 volume = (80 + self.volume["value"]) / 80
             else:
                 volume = 0.5
+
         
         # draw the scrolling text
+        zone_name = (self.zone_name or "no output").replace("[Muspi]", "")
         scroll_step = self.get_step_time()
         scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font04b08)
+        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font04b08)
         scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
         scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=22, step=scroll_step, font=self.font8)
+        
+        
         
         ## draw the VU table
         if self.play_state == "playing":
             draw_vu(self.draw, volume_level=volume)
-
             if self.manager.sleep:
                 self.manager.turn_on_screen()
-            self.icon_drawer.draw_play(x=41, y=0)
+            # self.icon_drawer.draw_play(x=41, y=0)
         else:
             draw_vu(self.draw, volume_level=0.0)
-            self.icon_drawer.draw_pause(x=41, y=0)
+            # self.icon_drawer.draw_pause(x=41, y=0)
         
         ## draw the volume wave icon
         self.icon_drawer.draw_volume_wave(x=110, y=0, level=volume)

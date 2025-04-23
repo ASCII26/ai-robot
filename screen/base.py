@@ -72,7 +72,7 @@ class DisplayPlugin(ABC):
         self.speed = 0.2  # speed parameter, default 1.0, means 1 unit per second
         self.pause_timout = 30   # 30 seconds
 
-        LOGGER.info(f"[\033[1m{self.name}\033[0m] initialized with id {id}.")
+        LOGGER.info(f"[\033[1m{self.name}\033[0m] initialized.")
 
     @abstractmethod
     def update(self):

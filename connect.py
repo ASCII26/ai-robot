@@ -12,7 +12,7 @@ from screen.airplay import AirPlayDisplay
 from screen.clock import ClockDisplay
 from screen.dino import DinoGameDisplay
 from screen.life import LifeDisplay
-
+from screen.xiaozhi import XiaozhiDisplay
 
 # add until plugins
 from until.log import LOGGER
@@ -59,6 +59,7 @@ class DisplayManager:
         
         # initialize plugins
         self.plugins = []
+        self.add_plugin(XiaozhiDisplay, auto_hide=False)
         self.add_plugin(ClockDisplay, auto_hide=False)
         self.add_plugin(DinoGameDisplay, auto_hide=False)
         self.add_plugin(LifeDisplay, auto_hide=False)
@@ -74,7 +75,6 @@ class DisplayManager:
         id = len(self.plugins)
         plugin_instance = plugin(self, self.disp.width, self.disp.height)
         plugin_instance.id = id
-        
         
         plugin = {
             "plugin": plugin_instance,
@@ -155,6 +155,8 @@ class DisplayManager:
                     self.disp.ShowImage()
                     frame_time = self.last_active.get_frame_time()
                 except Exception as e:
+                    import traceback
+                    LOGGER.error(f"错误堆栈: {traceback.format_exc()}")
                     #if error keep frame
                     LOGGER.error(f"error: {e}")
                     frame_time = 0.1
