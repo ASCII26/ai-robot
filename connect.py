@@ -63,7 +63,7 @@ class DisplayManager:
         self.add_plugin(DinoGameDisplay, auto_hide=False)
         self.add_plugin(LifeDisplay, auto_hide=False)
         self.add_plugin(AirPlayDisplay, auto_hide=True)
-        self.add_plugin(RoonDisplay, auto_hide=True)
+        self.add_plugin(RoonDisplay, auto_hide=False)
         
         
         # register signal handler
@@ -122,9 +122,15 @@ class DisplayManager:
                     self.active_next()
                     self.longpress_count = time.time()
                 if evt.code == ecodes.KEY_VOLUMEUP:
-                    adjust_volume("up")
+                    if hasattr(self.last_active, "adjust_volume"):
+                        self.last_active.adjust_volume("up")
+                    else:
+                        adjust_volume("up")
                 if evt.code == ecodes.KEY_VOLUMEDOWN:
-                    adjust_volume("down")
+                    if hasattr(self.last_active, "adjust_volume"):
+                        self.last_active.adjust_volume("down")
+                    else:
+                        adjust_volume("down")
 
     def run(self):
         detect_pcm_controls()

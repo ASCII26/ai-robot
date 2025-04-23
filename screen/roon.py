@@ -96,40 +96,42 @@ class RoonDisplay(DisplayPlugin):
                 while True:
                     try:
                         zones = self.roon.zones
+                        
                         for zone_id in zones:
                             zone = zones[zone_id]
-                            zone_name = zone["display_name"]
-                           
-                            if "[Muspi]" in zone_name:
-                                play_state = zone["state"]
-                                self.metadata_queue.put(("zone_id", zone_id))
-                                self.metadata_queue.put(("play_state", play_state))
-                                if "now_playing" in zone:
-                                    if play_state == "playing":
-                                        self.metadata_queue.put(("session_state", True))
 
-                                    np = zone["now_playing"]
-                                    self.metadata_queue.put(("seek_position", np["seek_position"]))
-                                    self.metadata_queue.put(("length", np["length"]))
-                                    
-                                    if "three_line" in np:
-                                        lines = np["three_line"]
-                                        self.metadata_queue.put(("title", lines["line1"]))
-                                        self.metadata_queue.put(("artist", lines["line2"]))
-                                        self.metadata_queue.put(("album", lines["line3"]))
-                                else:
-                                    self.metadata_queue.put(("session_state", False))
-                                 
+                            if "outputs" in zone:
+                                outputs = zone["outputs"]
+                                if outputs:  # 确保 outputs 列表不为空
+                                    # 获取第一个输出的音量信息
+                                    for output in outputs:
+                                        if "display_name" in output:
+                                            zone_name = output["display_name"]
                                         
-                                # 更新音量
-                                if "outputs" in zone:
-                                    outputs = zone["outputs"]
-                                    if outputs:  # 确保 outputs 列表不为空
-                                        # 获取第一个输出的音量信息
-                                        output = outputs[0]
-                                        if "volume" in output:
-                                            volume = output["volume"]
-                                            self.metadata_queue.put(("volume", volume))
+                                        if "[Muspi]" in zone_name:
+                                            play_state = zone["state"]
+                                            self.metadata_queue.put(("zone_id", zone_id))
+                                            self.metadata_queue.put(("play_state", play_state))
+                                            
+                                            if "volume" in output:
+                                                volume = output["volume"]
+                                                self.metadata_queue.put(("volume", volume))
+
+                                            if "now_playing" in zone:
+                                                if play_state == "playing":
+                                                    self.metadata_queue.put(("session_state", True))
+
+                                                np = zone["now_playing"]
+                                                self.metadata_queue.put(("seek_position", np["seek_position"]))
+                                                self.metadata_queue.put(("length", np["length"]))
+                                                
+                                                if "three_line" in np:
+                                                    lines = np["three_line"]
+                                                    self.metadata_queue.put(("title", lines["line1"]))
+                                                    self.metadata_queue.put(("artist", lines["line2"]))
+                                                    self.metadata_queue.put(("album", lines["line3"]))
+                                            else:
+                                                self.metadata_queue.put(("session_state", False))
                             else:
                                 pass
 
@@ -232,6 +234,19 @@ class RoonDisplay(DisplayPlugin):
         else:
             self.manager.key_listener.off(self.key_callback)
     
+    # def adjust_volume(self, value):
+    #     zone = self.roon.zones[self.zone_id]
+    #     outputs = zone["outputs"]
+        
+    #     for output in outputs:
+    #         if "volume" in output:
+    #             output_id = output["output_id"]
+    #             if value == "up":
+    #                 self.roon.change_volume_percent(output_id, 5)
+    #             elif value == "down":
+    #                 self.roon.change_volume_percent(output_id, -5)
+                
+
     def key_callback(self, device_name, evt):
         if evt.value == 1:  # key down
             if evt.code == ecodes.KEY_KP1 or evt.code == ecodes.KEY_PLAYPAUSE:

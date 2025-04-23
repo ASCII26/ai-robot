@@ -5,7 +5,7 @@ from until.log import LOGGER
 
 CARD = "default"
 MIN_DB = -115.0
-STEP = "1.5dB"
+STEP = "1.0dB"
 
 PCM_CONTROLS = []
 
