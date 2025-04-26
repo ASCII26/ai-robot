@@ -146,7 +146,7 @@ class XiaozhiDisplay(DisplayPlugin):
 
     def _on_message(self, client, userdata, message):
         msg = json.loads(message.payload)
-        LOGGER.debug(f"recv message: {msg}")
+        LOGGER.info(f"recv message: {msg}")
         self.sleep_time = time.time()  # reset sleep time
         
         if msg['type'] == 'hello':
@@ -235,7 +235,7 @@ class XiaozhiDisplay(DisplayPlugin):
                 
             # 发送start listen消息
             msg = {"session_id": self.aes_opus_info['session_id'], "type": "listen", "state": "start", "mode": "manual"}
-            LOGGER.info(f"send start listen message: {msg}")
+            LOGGER.info(f"send start msg: {msg}")
             self._push_mqtt_msg(msg)
 
     def _off_listening(self):
@@ -243,7 +243,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.robot.set_emotion("neutral")
         if self.aes_opus_info['session_id'] is not None:
             msg = {"session_id": self.aes_opus_info['session_id'], "type": "listen", "state": "stop"}
-            LOGGER.info(f"send stop listen message: {msg}")
+            LOGGER.info(f"send stop msg: {msg}")
             self._push_mqtt_msg(msg)
 
     def _send_audio(self):
@@ -267,7 +267,7 @@ class XiaozhiDisplay(DisplayPlugin):
                 input_device_index=1,  # 使用 USB 音频设备
                 frames_per_buffer=FRAME_SIZE
             )
-            LOGGER.info(f"audio input device opened, sample rate: {DEVICE_RATE}Hz")
+            LOGGER.info(f"input device sample rate: {DEVICE_RATE}Hz")
             
             while self.conn_state:
                 if self.is_listening:
@@ -305,7 +305,8 @@ class XiaozhiDisplay(DisplayPlugin):
         frame_duration = self.aes_opus_info['audio_params']['frame_duration']
         frame_num = int(sample_rate * (frame_duration / 1000 ))
 
-        LOGGER.info(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
+        # LOGGER.debug(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
+        
         # 初始化Opus解码器
         decoder = opuslib.Decoder(fs=sample_rate, channels=1)
         spk = self.audio.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True, frames_per_buffer=frame_num)
