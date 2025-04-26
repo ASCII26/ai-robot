@@ -3,6 +3,7 @@ import time
 import requests
 import paho.mqtt.client as mqtt
 import threading
+import queue
 import pyaudio
 import opuslib
 import socket
@@ -16,7 +17,7 @@ from until.log import LOGGER
 from until.emotion import RobotEmotion
 from until.textarea import TextArea
 from until.animation import Animation
-import select
+
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 MAC_ADDR = 'b8:27:eb:bc:fa:ef'
@@ -145,7 +146,7 @@ class XiaozhiDisplay(DisplayPlugin):
 
     def _on_message(self, client, userdata, message):
         msg = json.loads(message.payload)
-        LOGGER.info(f"recv message: {msg}")
+        LOGGER.debug(f"recv message: {msg}")
         self.sleep_time = time.time()  # reset sleep time
         
         if msg['type'] == 'hello':
@@ -297,51 +298,74 @@ class XiaozhiDisplay(DisplayPlugin):
             mic.close()
     
     def _recv_audio(self):
+        import threading
         key = self.aes_opus_info['udp']['key']
         nonce = self.aes_opus_info['udp']['nonce']
         sample_rate = self.aes_opus_info['audio_params']['sample_rate']
         frame_duration = self.aes_opus_info['audio_params']['frame_duration']
-        frame_num = int(frame_duration / (1000 / sample_rate))
+        frame_num = int(sample_rate * (frame_duration / 1000 ))
+
         LOGGER.info(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
-        
         # 初始化Opus解码器
-        decoder = opuslib.Decoder(sample_rate, 1)
+        decoder = opuslib.Decoder(fs=sample_rate, channels=1)
         spk = self.audio.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True, frames_per_buffer=frame_num)
-        
-        try:
-            while self.conn_state:
+
+        pcm_queue = queue.Queue(maxsize=20)
+        self._audio_threads_running = True
+
+        def recv_decode_thread():
+            while self.conn_state and self._audio_threads_running:
                 try:
-                    # 使用 select 检查 socket 是否可读，超时 1 秒
-                    readable, _, _ = select.select([self.udp_socket], [], [], 1.0)
-                    if not readable:
-                        continue
-
-                    if self.udp_socket == None:
+                    if self.udp_socket is None:
                         break
-                    
                     data, server = self.udp_socket.recvfrom(4096)
-                    if not data:  # 收到空数据包，说明是关闭信号
-                        break
-                        
-                    # LOGGER.info(f"recv audio data from {server}, data length: {len(data)}")
-                    encrypt_encoded_data = data
-                    # 解密数据,分离nonce
-                    split_encrypt_encoded_data_nonce = encrypt_encoded_data[:16]
-
-                    split_encrypt_encoded_data = encrypt_encoded_data[16:]
-                    decrypt_data = aes_ctr_decrypt(bytes.fromhex(key),
-                                                split_encrypt_encoded_data_nonce,
-                                                split_encrypt_encoded_data)
-                    # 解码播放音频数据
-                    spk.write(decoder.decode(decrypt_data, frame_num))
-                except socket.error as e:
-                    if e.errno == socket.errno.EAGAIN or e.errno == socket.errno.EWOULDBLOCK:
+                    if len(data) < 16:
+                        LOGGER.error(f"recv audio data err: {len(data)}")
                         continue
+                    received_nonce = data[:16]
+                    encrypted_audio = data[16:]
+                    decrypted = aes_ctr_decrypt(
+                        bytes.fromhex(key),
+                        received_nonce,
+                        encrypted_audio
+                    )
+                    decoded = decoder.decode(decrypted, frame_num, decode_fec=False)
+                    try:
+                        pcm_queue.put(decoded, timeout=1)
+                    except queue.Full:
+                        LOGGER.warning("PCM queue full, dropping frame")
+                except Exception as e:
+                    LOGGER.error(f"recv/decode audio err: {e}")
+                    break
+
+        def play_thread():
+            while self.conn_state and self._audio_threads_running:
+                try:
+                    decoded = pcm_queue.get(timeout=1)
+                except queue.Empty:
+                    decoded = b'\x00' * (frame_num * 2)  # 静音
+                try:
+                    spk.write(decoded)
+                except Exception as e:
+                    if hasattr(e, 'errno') and e.errno == -9988:
+                        LOGGER.info("audio stream closed, playback thread exit.")
                     else:
-                        raise
+                        LOGGER.warning(f"audio playback err: {e}")
+                    break
+
+        try:
+            t1 = threading.Thread(target=recv_decode_thread, daemon=True)
+            t2 = threading.Thread(target=play_thread, daemon=True)
+            t1.start()
+            t2.start()
+            # 主线程等待子线程结束
+            while self.conn_state and self._audio_threads_running and (t1.is_alive() or t2.is_alive()):
+                t1.join(timeout=0.1)
+                t2.join(timeout=0.1)
         except Exception as e:
-            LOGGER.error(f"recv audio err: {e}")
+            LOGGER.error(f"audio thread err: {e}")
         finally:
+            self._audio_threads_running = False
             LOGGER.info("recv audio exit()")
             spk.stop_stream()
             spk.close()
