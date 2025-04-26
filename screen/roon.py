@@ -215,8 +215,8 @@ class RoonDisplay(DisplayPlugin):
         # draw the scrolling text
         zone_name = (self.zone_name or "no output").replace("[Muspi]", "")
         scroll_step = self.get_step_time()
-        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font04b08)
-        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font04b08)
+        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font_mono_8)
+        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font_mono_8)
         scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
         scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=22, step=scroll_step, font=self.font8)
         

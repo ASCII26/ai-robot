@@ -114,7 +114,7 @@ class AirPlayDisplay(DisplayPlugin):
         # draw the scrolling text
         scroll_step = self.get_step_time()
         if self.current_title and self.current_artist:
-            scroll_text(self.draw, "AIRPLAY", x=24, y=0, step=scroll_step, font=self.font04b08)
+            scroll_text(self.draw, "AIRPLAY", x=24, y=0, step=scroll_step, font=self.font_mono_8)
             scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
             scroll_text(self.draw, self.current_artist, x=24, y=22, step=scroll_step, font=self.font8)
         

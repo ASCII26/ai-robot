@@ -3,27 +3,12 @@ import random
 import time
 import math
 from until.animation import Animation
+from until.matrix import Matrix
+from until.emotion_pattern import PATTERN
 
-WIDTH, HEIGHT = 80, 32  # 修改宽度为64
+WIDTH, HEIGHT = 80, 32  # 修改宽度为80
 LOOK_DURATION = 2  # 每个位置停留2秒
-HEARTS = [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ]
+
 
 EMOTIONS = {
             "neutral": {"left_eye": "open", "right_eye": "open","mask_rotation": [10,15]},
@@ -47,7 +32,7 @@ EMOTIONS = {
             "sleepy": {"left_eye": "sleeping", "right_eye": "sleeping","breathe":True},
             "silly": {"left_eye": "laughing", "right_eye": "open"},
             "confused": {"left_eye": "close", "right_eye": "close"},
-            "listening": {"left_eye": "happy", "right_eye": "happy","breathe":True},
+            "listening": {"left_eye": "open", "right_eye": "winking","breathe":True},
         }
 NO_BLINK = ["listening","sleepy", "confused","laughing","funny","relaxed","delicious"]
 
@@ -200,10 +185,10 @@ class RobotEmotion:
             # 睁大的眼睛，画一个更大的
             draw.ellipse((x1-2, y1-2, x2+2, y2+2), fill=255)
         elif state == "hearts":
-            for i in range(len(HEARTS)):
-                for j in range(len(HEARTS[i])):
-                    if HEARTS[i][j] == 1:
-                        draw.point((x1+j, y1+i), fill=255)
+            # 绘制爱心
+            matrix = Matrix(draw)
+            matrix.set_matrix(PATTERN.HEARTS)
+            matrix.draw((x1, y1))
             
     # 绘制表情
     def make_face(self):
@@ -230,9 +215,19 @@ class RobotEmotion:
 
         # 将翻转后的右眼粘贴到正确位置，确保坐标是整数
         img.paste(right_eye, (int(45+eye_offset_x), int(4+eye_offset_y)))
-        
-        return img
 
+        return self.draw_action(img)
+
+    def draw_action(self,img):
+        if self.current_emotion == "listening":
+            matrix = Matrix()
+            matrix.set_matrix(PATTERN.LISTENING[int((time.time()*2)%len(PATTERN.LISTENING))])
+            matrix.new() # create img
+            matrix.draw()
+            img.paste(matrix.img, (WIDTH - int(matrix.width * 1.6), int(3 - (time.time()*1.5)%2)))
+            
+        return img
+    
     # 更新表情
     def update(self):
         current_time = time.time()

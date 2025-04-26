@@ -30,8 +30,11 @@ RESAMPLE_RATIO = TARGET_RATE / DEVICE_RATE
 FRAME_SIZE = 960  # Opus 帧大小
 
 EMOTION_FRAME_TIME = 1.0 / 45.0
-SLEEP_TIMEOUT = 2 * 60 # 2 minutes
-CHATBOX_WIDTH = 58 # 聊天框宽度
+SLEEP_TIMEOUT = 3 * 60 # 3 minutes for sleep
+CHATBOX_WIDTH = 62 # 聊天框宽度
+ROBOT_OFFSET_X = 34
+
+AUTO_CHATBOX = False
 
 def resample_audio(data, original_rate, target_rate):
     """将音频数据从原始采样率重采样到目标采样率"""
@@ -85,7 +88,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.is_sleeping = False
         
         self.robot = RobotEmotion()
-        self.text_area = TextArea(font=self.font04b08,width=CHATBOX_WIDTH,line_spacing=4)
+        self.text_area = TextArea(font=self.font_mono_8,width=CHATBOX_WIDTH,line_spacing=4)
         
         # init audio & mqtt
         self.audio = pyaudio.PyAudio()
@@ -156,7 +159,8 @@ class XiaozhiDisplay(DisplayPlugin):
             self.tts_state = msg['state']
             if self.tts_state == "sentence_start":
                 self.is_speaking = True
-                self._open_chatbox();
+                if AUTO_CHATBOX:
+                    self._open_chatbox();
                 self.text_area.append_text(msg['text'])
             elif self.tts_state == "sentence_end":
                 self.is_speaking = False
@@ -165,7 +169,8 @@ class XiaozhiDisplay(DisplayPlugin):
         if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self.aes_opus_info['session_id']:
             LOGGER.info(f"recv good bye msg")
             self.text_area.append_text("see you.")
-            self._close_chatbox();
+            if AUTO_CHATBOX:
+                self._close_chatbox();
             self.aes_opus_info['session_id'] = None
             self._close_udp_conn()
 
@@ -349,7 +354,7 @@ class XiaozhiDisplay(DisplayPlugin):
     
     #def start(self, id, obj, attr, target, duration=None):
     def _open_chatbox(self):
-        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=-32)
+        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=-ROBOT_OFFSET_X)
         self.anim.start('chatbox_offset_x',obj=self,attr='chatbox_offset_x',target=-CHATBOX_WIDTH)
             
     def _close_chatbox(self):

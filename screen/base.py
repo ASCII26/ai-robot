@@ -8,8 +8,8 @@ from until.log import LOGGER
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONT_8 = ImageFont.truetype("./fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 8)
 FONT_16 = ImageFont.truetype("./fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 16)
-FONT_24 = ImageFont.truetype("./fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 24)
-FONT_04B08 = ImageFont.truetype("./fonts/fusion-pixel-8px-monospaced-zh_hans.ttf", 8)
+FONT_MONO_8 = ImageFont.truetype("./fonts/fusion-pixel-8px-monospaced-zh_hans.ttf", 8)
+FONT_04B08 = ImageFont.truetype("./fonts/04B_08__.TTF", 8)
 
 def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(24, 24)):
     """welcome screen"""
@@ -63,8 +63,7 @@ class DisplayPlugin(ABC):
         # Fonts
         self.font8 = FONT_8
         self.font16 = FONT_16
-        self.font24 = FONT_24
-        self.font04b08 = FONT_04B08
+        self.font_mono_8 = FONT_MONO_8
         
         # Parameters
         self.start_time = time.time()

@@ -3,7 +3,18 @@ import textwrap
 import os
 import time
 from until.animation import Animation
+from until.matrix import Matrix
 
+# 绘制一个简单的图案
+ARROW_PATTERN = [
+    [0, 0, 1],
+    [0, 1, 0],
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]
+]
+
+        
 class TextArea:
     def __init__(self, width=64, height=32, font = None,line_spacing=2):
         self.width = width
@@ -21,7 +32,7 @@ class TextArea:
         self.line_spacing = line_spacing  # 行间距
         self.total_line_height = self.line_height + self.line_spacing  # 总行高
 
-        self.left_padding = 1
+        self.left_padding = 3
         self.max_render_boxes = 5  # 最大可见文本盒子数量，控制同时渲染的文字数量
         self.last_text_box = None
         self.temp_img = None
@@ -35,7 +46,7 @@ class TextArea:
     def append_text(self, text):
         """添加新文本，自动换行并滚动"""
         # 将文本按宽度换行，每个中文字符占8像素
-        wrapped_lines = textwrap.wrap(text, width=self.width // 8)  # 假设每个字符宽度为8像素
+        wrapped_lines = textwrap.wrap(text, width= (self.width - self.left_padding) // 8)  # 假设每个字符宽度为8像素
         
         # 创建新的文本盒子
         self.last_text_box = {
@@ -73,7 +84,7 @@ class TextArea:
             visible_boxes = self.text_boxes[-self.max_render_boxes:]
             total_height = sum(box['height'] for box in visible_boxes)
 
-            self.temp_img = Image.new('1', (self.width, total_height), 0)
+            self.temp_img = Image.new('1', (self.width-self.left_padding, total_height), 0)
             draw = ImageDraw.Draw(self.temp_img)
             
             # 当前绘制位置
@@ -100,7 +111,13 @@ class TextArea:
         target = self.viewport_height-self.height-self.line_spacing
         
         bottom_offset = max(0,int(self.ani.run("scroll",target)))
-        img.paste(self.temp_img, (0,0 - bottom_offset))
+        img.paste(self.temp_img, (self.left_padding-1,0 - bottom_offset))
+        draw.line((2,1,2,self.height-1),fill=255)
+        
+        # 绘制三角形
+        matrix = Matrix(draw)
+        matrix.set_matrix(ARROW_PATTERN)
+        matrix.draw((0, 8),transparent=False)
         return img
 
 
