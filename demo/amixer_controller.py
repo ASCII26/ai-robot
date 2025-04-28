@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
 import evdev
 from evdev import InputDevice, ecodes,list_devices
 import subprocess
 import re
-from screen.base import LOGGER
+
+from until.log import LOGGER
 
 CARD = "default"
 MIN_DB = -115.0

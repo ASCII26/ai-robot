@@ -43,7 +43,6 @@ class DisplayManager:
         self.disp = SSD1305.SSD1305()
         self.turn_on_screen()
         self.welcome()
-        time.sleep(3)
         
         # init variables
         self.key_listener = KeyListener()

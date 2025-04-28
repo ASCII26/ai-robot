@@ -91,13 +91,13 @@ def test_audio():
                 encoded_data = encoder.encode(resampled_data, int(FRAME_SIZE * RESAMPLE_RATIO))
                 
             # 加密数据，添加nonce
-            encrypt_encoded_data = nonce + aes_ctr_encrypt(key, nonce, bytes(encoded_data))
-                
+                encrypt_encoded_data = nonce + aes_ctr_encrypt(key, nonce, bytes(encoded_data))
+                    
             # 解密数据,分离nonce
-            split_encrypt_encoded_data_nonce = encrypt_encoded_data[:len(nonce)]
-            split_encrypt_encoded_data = encrypt_encoded_data[len(nonce):]
-            decrypt_data = aes_ctr_decrypt(key, split_encrypt_encoded_data_nonce, split_encrypt_encoded_data)
-                
+                split_encrypt_encoded_data_nonce = encrypt_encoded_data[:len(nonce)]
+                split_encrypt_encoded_data = encrypt_encoded_data[len(nonce):]
+                decrypt_data = aes_ctr_decrypt(key, split_encrypt_encoded_data_nonce, split_encrypt_encoded_data)
+                    
             # 解码播放音频数据
                 decoded_data = decoder.decode(decrypt_data, int(FRAME_SIZE * RESAMPLE_RATIO))
                 
@@ -120,12 +120,12 @@ def test_audio():
     finally:
         # 关闭流和PyAudio
         if 'mic' in locals():
-        mic.stop_stream()
-        mic.close()
+            mic.stop_stream()
+            mic.close()
         if 'spk' in locals():
-        spk.stop_stream()
-        spk.close()
-        p.terminate()
+            spk.stop_stream()
+            spk.close()
+            p.terminate()
         
 if __name__ == "__main__":
     test_audio()

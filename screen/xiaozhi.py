@@ -4,10 +4,12 @@ import requests
 import paho.mqtt.client as mqtt
 import threading
 import queue
-import pyaudio
+# import pyaudio
 import opuslib
 import socket
 import numpy as np
+import subprocess
+
 from scipy import signal
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
@@ -17,6 +19,7 @@ from until.log import LOGGER
 from until.emotion import RobotEmotion
 from until.textarea import TextArea
 from until.animation import Animation
+
 
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
@@ -92,7 +95,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.text_area = TextArea(font=self.font_mono_8,width=CHATBOX_WIDTH,line_spacing=4)
         
         # init audio & mqtt
-        self.audio = pyaudio.PyAudio()
+        # self.audio = pyaudio.PyAudio()
         self.send_audio_thread = threading.Thread()
         self.recv_audio_thread = threading.Thread()
         self._get_ota_version()
@@ -254,26 +257,29 @@ class XiaozhiDisplay(DisplayPlugin):
         
         # 初始化Opus编码器
         encoder = opuslib.Encoder(TARGET_RATE, 1, opuslib.APPLICATION_AUDIO)
-        mic = None
         
         try:
-            # 打开麦克风流，使用设备支持的采样率
-            LOGGER.info(f"try to open audio input device...")
-            mic = self.audio.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=DEVICE_RATE,
-                input=True,
-                input_device_index=1,  # 使用 USB 音频设备
-                frames_per_buffer=FRAME_SIZE
-            )
-            LOGGER.info(f"input device sample rate: {DEVICE_RATE}Hz")
+            # 使用arecord命令录制音频，使用设备采样率
+            arecord = subprocess.Popen([
+                'arecord',
+                '-f', 'S16_LE',  # 16位小端
+                '-r', str(DEVICE_RATE),  # 使用设备采样率
+                '-c', '1',       # 单声道
+                '-t', 'raw',     # 裸PCM流
+                '-q',            # 静默模式
+                '-D', 'hw:1,0'   # 指定USB音频设备
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            LOGGER.info(f"start recording with arecord, sample rate: {DEVICE_RATE}Hz")
             
             while self.conn_state:
                 if self.is_listening:
                     try:
-                        data = mic.read(FRAME_SIZE, exception_on_overflow=False)
-                        # LOGGER.info(f"read audio data, length: {len(data)}")
+                        # 读取一帧音频数据
+                        data = arecord.stdout.read(FRAME_SIZE * 2)  # 16位 = 2字节
+                        if not data:
+                            break
+                            
                         # 降采样到目标采样率
                         resampled_data = resample_audio(data, DEVICE_RATE, TARGET_RATE)
                         encoded_data = encoder.encode(resampled_data, int(FRAME_SIZE * RESAMPLE_RATIO))
@@ -294,8 +300,8 @@ class XiaozhiDisplay(DisplayPlugin):
         finally:
             LOGGER.info("send audio exit()")
             self.local_sequence = 0
-            mic.stop_stream()
-            mic.close()
+            arecord.stdout.close()
+            arecord.wait()
     
     def _recv_audio(self):
         import threading
@@ -309,9 +315,18 @@ class XiaozhiDisplay(DisplayPlugin):
         
         # 初始化Opus解码器
         decoder = opuslib.Decoder(fs=sample_rate, channels=1)
-        spk = self.audio.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True, frames_per_buffer=frame_num)
+        # 使用更优化的aplay参数
+        spk = subprocess.Popen([
+            'aplay',
+            '-f', 'S16_LE',  # 16位小端
+            '-r', str(sample_rate),   # 使用实际采样率
+            '-c', '1',       # 单声道
+            '-t', 'raw',     # 裸PCM流
+            '-B', '100000',  # 增加缓冲区大小
+            '-q'             # 静默模式
+        ], stdin=subprocess.PIPE)
 
-        pcm_queue = queue.Queue(maxsize=20)
+        pcm_queue = queue.Queue(maxsize=100)  # 进一步增加队列大小
         self._audio_threads_running = True
 
         def recv_decode_thread():
@@ -332,28 +347,41 @@ class XiaozhiDisplay(DisplayPlugin):
                     )
                     decoded = decoder.decode(decrypted, frame_num, decode_fec=False)
                     try:
-                        pcm_queue.put(decoded, timeout=1)
+                        pcm_queue.put_nowait(decoded)  # 使用非阻塞方式
                     except queue.Full:
-                        LOGGER.warning("PCM queue full, dropping frame")
+                        # 队列满时，丢弃最旧的数据
+                        try:
+                            pcm_queue.get_nowait()
+                            pcm_queue.put_nowait(decoded)
+                        except:
+                            pass
                 except Exception as e:
                     LOGGER.error(f"recv/decode audio err: {e}")
                     break
 
         def play_thread():
+            cache = bytearray()
+            cache_size = 1024  # 进一步减小缓存大小
             while self.conn_state and self._audio_threads_running:
                 try:
-                    decoded = pcm_queue.get(timeout=1)
+                    decoded = pcm_queue.get_nowait()  # 使用非阻塞方式
                 except queue.Empty:
-                    decoded = b'\x00' * (frame_num * 2)  # 静音
-                try:
-                    spk.write(decoded)
-                except Exception as e:
-                    if hasattr(e, 'errno') and e.errno == -9988:
-                        LOGGER.info("audio stream closed, playback thread exit.")
-                    else:
-                        LOGGER.warning(f"audio playback err: {e}")
-                    break
-
+                    # 队列为空时，使用静音填充
+                    decoded = b'\x00' * (frame_num * 2)
+                    time.sleep(0.01)  # 短暂休眠，避免CPU占用过高
+                
+                cache += decoded
+                if len(cache) >= cache_size:
+                    try:
+                        spk.stdin.write(cache)
+                        spk.stdin.flush()
+                        cache.clear()
+                    except Exception as e:
+                        if hasattr(e, 'errno') and e.errno == -9988:
+                            LOGGER.info("audio stream closed, playback thread exit.")
+                        else:
+                            LOGGER.warning(f"audio playback err: {e}")
+                        break
         try:
             t1 = threading.Thread(target=recv_decode_thread, daemon=True)
             t2 = threading.Thread(target=play_thread, daemon=True)
@@ -368,8 +396,11 @@ class XiaozhiDisplay(DisplayPlugin):
         finally:
             self._audio_threads_running = False
             LOGGER.info("recv audio exit()")
-            spk.stop_stream()
-            spk.close()
+            # spk.stop_stream()
+            # spk.close()
+            spk.stdin.close()
+            spk.wait()
+            
 
     def switch_chatbox(self):
         if self.chatbox_offset_x == 0:
