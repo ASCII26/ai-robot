@@ -105,15 +105,14 @@ class RoonDisplay(DisplayPlugin):
                                 if outputs:  # 确保 outputs 列表不为空
                                     # 获取第一个输出的音量信息
                                     for output in outputs:
-                                        if "display_name" in output:
-                                            zone_name = output["display_name"]
-                                            self.metadata_queue.put(("zone_name", zone_name))
+                                        zone_name = output["display_name"]
                                         
                                         if "[Muspi]" in zone_name:
                                             play_state = zone["state"]
                                             self.metadata_queue.put(("zone_id", zone_id))
                                             self.metadata_queue.put(("play_state", play_state))
-                                            
+                                            self.metadata_queue.put(("zone_name", zone_name))
+
                                             if "volume" in output:
                                                 volume = output["volume"]
                                                 self.metadata_queue.put(("volume", volume))
@@ -215,13 +214,11 @@ class RoonDisplay(DisplayPlugin):
         # draw the scrolling text
         zone_name = (self.zone_name or "no output").replace("[Muspi]", "")
         scroll_step = self.get_step_time()
-        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font_mono_8)
-        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font_mono_8)
-        scroll_text(self.draw, self.current_title, x=24, y=10, step=scroll_step, font=self.font8)
-        scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=22, step=scroll_step, font=self.font8)
-        
-        
-        
+        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font5)
+        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font5)
+        scroll_text(self.draw, self.current_title, x=24, y=12, step=scroll_step, font=self.font8)
+        scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=24, step=scroll_step, font=self.font8)
+                
         ## draw the VU table
         if self.play_state == "playing":
             draw_vu(self.draw, volume_level=volume)

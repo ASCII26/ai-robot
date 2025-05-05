@@ -22,11 +22,11 @@ class ClockDisplay(DisplayPlugin):
         if self.show_colon:
             time_str = time.strftime("%H:%M:%S")
         else:
-            time_str = time.strftime("%H\u2000%M\u2000%S")
+            time_str = time.strftime("%H %M %S")
         
         text_width = self.font16.getlength(time_str)
         x = (self.width - text_width) // 2
-        y = (self.height - 16) // 2
+        y = (self.height - 16) // 2 + 4
         self.draw.text((x, y), time_str, font=self.font16, fill=255)
         
         # display date (small font, top center)

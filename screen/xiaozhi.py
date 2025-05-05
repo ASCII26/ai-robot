@@ -92,7 +92,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.is_sleeping = False
         
         self.robot = RobotEmotion()
-        self.text_area = TextArea(font=self.font_mono_8,width=CHATBOX_WIDTH,line_spacing=4)
+        self.text_area = TextArea(font=self.font8,width=CHATBOX_WIDTH,line_spacing=4)
         
         # init audio & mqtt
         # self.audio = pyaudio.PyAudio()

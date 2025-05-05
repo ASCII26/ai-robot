@@ -6,10 +6,10 @@ from until.log import LOGGER
 
 # 获取当前文件所在目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_8 = ImageFont.truetype("./fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 8)
-FONT_16 = ImageFont.truetype("./fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 16)
-FONT_MONO_8 = ImageFont.truetype("./fonts/fusion-pixel-8px-monospaced-zh_hans.ttf", 8)
-FONT_04B08 = ImageFont.truetype("./fonts/04B_08__.TTF", 8)
+FONT_5 = ImageFont.truetype("./fonts/QuinqueFive.ttf", 5)
+FONT_8 = ImageFont.truetype("./fonts/QuanPixel.ttf", 8)
+FONT_16 = ImageFont.truetype("./fonts/QuanPixel.ttf", 16)
+
 
 def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(24, 24)):
     """welcome screen"""
@@ -30,8 +30,9 @@ def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(
     
     # 绘制边框
     draw.rectangle((0, 0, width-1, height-1), outline=255, width=1)
+    
      # 绘制文字
-    draw.text((60, 6), msg, font=FONT_16, fill=255)
+    draw.text((60, (height - 16) // 2), msg, font=FONT_16, fill=255)
 
     # 如果logo加载成功，绘制logo
     if logo:
@@ -61,9 +62,10 @@ class DisplayPlugin(ABC):
         self.draw = ImageDraw.Draw(self.image)
         
         # Fonts
+        self.font5 = FONT_5
         self.font8 = FONT_8
         self.font16 = FONT_16
-        self.font_mono_8 = FONT_MONO_8
+
         
         # Parameters
         self.start_time = time.time()

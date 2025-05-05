@@ -4,7 +4,7 @@ import re
 from until.log import LOGGER
 
 CARD = "default"
-MIN_DB = -115.0
+MIN_DB = -102.0
 STEP = "1.0dB"
 
 PCM_CONTROLS = []
@@ -41,7 +41,7 @@ def detect_pcm_controls():
 
 def db_to_volume(db):
     # convert dB value (-100 to 0) to 0-100 volume percentage
-    return int((db + 115) * 100 / 100)
+    return int((db - MIN_DB) * 100 / (0 - MIN_DB+4))
 
 def get_current_db(control):
     try:
