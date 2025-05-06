@@ -6,9 +6,9 @@ from until.log import LOGGER
 
 # 获取当前文件所在目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_5 = ImageFont.truetype("./fonts/QuinqueFive.ttf", 5)
+FONT_STATUS = ImageFont.truetype("./fonts/FusionPixel.ttf", 8)
 FONT_8 = ImageFont.truetype("./fonts/QuanPixel.ttf", 8)
-FONT_16 = ImageFont.truetype("./fonts/QuanPixel.ttf", 16)
+FONT_16 = ImageFont.truetype("./fonts/FusionPixel.ttf", 16)
 
 
 def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(24, 24)):
@@ -62,7 +62,7 @@ class DisplayPlugin(ABC):
         self.draw = ImageDraw.Draw(self.image)
         
         # Fonts
-        self.font5 = FONT_5
+        self.font_status = FONT_STATUS
         self.font8 = FONT_8
         self.font16 = FONT_16
 

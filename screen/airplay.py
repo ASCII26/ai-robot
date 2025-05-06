@@ -16,6 +16,7 @@ class AirPlayDisplay(DisplayPlugin):
         self.icon_drawer = None
         self.current_title = "play next"
         self.current_artist = "show info"
+        self.current_album = ""
         self.play_state = "pause"
         self.stream_volume = None
         self.last_play_time = time.time()  # record the last play time
@@ -42,6 +43,12 @@ class AirPlayDisplay(DisplayPlugin):
                             try:
                                 artist = decoded_line.split('"')[1]
                                 self.metadata_queue.put(("artist", artist))
+                            except:
+                                pass
+                        elif "Album" in decoded_line:
+                            try:
+                                album = decoded_line.split('"')[1]
+                                self.metadata_queue.put(("album", album))
                             except:
                                 pass
                         elif "Title" in decoded_line:
@@ -83,6 +90,8 @@ class AirPlayDisplay(DisplayPlugin):
                     self.current_title = value
                 elif metadata_type == "artist":
                     self.current_artist = value
+                elif metadata_type == "album":
+                    self.current_album = value
                 elif metadata_type == "session_state":
                     self.set_active(value)
                     if value:  # if start playing, update the last play time
@@ -114,9 +123,9 @@ class AirPlayDisplay(DisplayPlugin):
         # draw the scrolling text
         scroll_step = self.get_step_time()
         if self.current_title and self.current_artist:
-            scroll_text(self.draw, "AIRPLAY", x=24, y=0, step=scroll_step, font=self.font5)
-            scroll_text(self.draw, self.current_title, x=24, y=12, step=scroll_step, font=self.font8)
-            scroll_text(self.draw, self.current_artist, x=24, y=24, step=scroll_step, font=self.font8)
+            scroll_text(self.draw, "♪AIRPLAY", x=24, y=0, step=scroll_step, font=self.font_status)
+            scroll_text(self.draw, self.current_title, x=24, y=12, step=scroll_step, font=self.font8,is_center=True)
+            scroll_text(self.draw, self.current_artist + " - " + self.current_album, x=24, y=24, step=scroll_step, font=self.font8,is_center=True)
         
         # draw the VU table
         if self.play_state == "play":

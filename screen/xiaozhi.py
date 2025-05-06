@@ -18,7 +18,7 @@ from evdev import ecodes
 from until.log import LOGGER
 from until.emotion import RobotEmotion
 from until.textarea import TextArea
-from until.animation import Animation
+from until.animation import Animation,Operator
 
 
 
@@ -172,7 +172,7 @@ class XiaozhiDisplay(DisplayPlugin):
                 
         if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self.aes_opus_info['session_id']:
             LOGGER.info(f"recv good bye msg")
-            self.text_area.append_text("see you.")
+            self.text_area.append_text("bye.")
             if AUTO_CHATBOX:
                 self._close_chatbox();
             self.aes_opus_info['session_id'] = None
@@ -410,12 +410,12 @@ class XiaozhiDisplay(DisplayPlugin):
     
     #def start(self, id, obj, attr, target, duration=None):
     def _open_chatbox(self):
-        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=-ROBOT_OFFSET_X)
-        self.anim.start('chatbox_offset_x',obj=self,attr='chatbox_offset_x',target=-CHATBOX_WIDTH)
+        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=-ROBOT_OFFSET_X,operator=Operator.ease_out_bounce)
+        self.anim.start('chatbox_offset_x',obj=self,attr='chatbox_offset_x',target=-CHATBOX_WIDTH,operator=Operator.ease_out_bounce)
             
     def _close_chatbox(self):
-        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=0)
-        self.anim.start('chatbox_offset_x',obj=self,attr='chatbox_offset_x',target=0)
+        self.anim.start('robot_offset_x',obj=self,attr='robot_offset_x',target=0,operator=Operator.ease_out_bounce)
+        self.anim.start('chatbox_offset_x',obj=self,attr='chatbox_offset_x',target=0,operator=Operator.ease_out_bounce)
    
     def update(self):
         self.clear()

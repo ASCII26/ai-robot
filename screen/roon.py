@@ -9,6 +9,8 @@ from .share.component import scroll_text, draw_vu
 from .share.icons import IconDrawer
 from until.input import ecodes
 
+SUFFIX = "[roon]" # 后缀, 监听 roon 的 output 名字
+ 
 class RoonDisplay(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "roon"
@@ -107,7 +109,7 @@ class RoonDisplay(DisplayPlugin):
                                     for output in outputs:
                                         zone_name = output["display_name"]
                                         
-                                        if "[Muspi]" in zone_name:
+                                        if zone_name.endswith(SUFFIX):
                                             play_state = zone["state"]
                                             self.metadata_queue.put(("zone_id", zone_id))
                                             self.metadata_queue.put(("play_state", play_state))
@@ -212,12 +214,14 @@ class RoonDisplay(DisplayPlugin):
 
         
         # draw the scrolling text
-        zone_name = (self.zone_name or "no output").replace("[Muspi]", "")
+        zone_name = (self.zone_name or "no output").replace(SUFFIX, "")
         scroll_step = self.get_step_time()
-        scroll_text(self.draw, "ROON", x=24, y=0, step=scroll_step, font=self.font5)
-        scroll_text(self.draw, zone_name, x=60, y=0, step=scroll_step, font=self.font5)
-        scroll_text(self.draw, self.current_title, x=24, y=12, step=scroll_step, font=self.font8)
-        scroll_text(self.draw, self.current_artist or self.current_album, x=24, y=24, step=scroll_step, font=self.font8)
+        
+        offset = 24
+        scroll_text(self.draw, "♪ROON", x=offset, y=0, step=scroll_step, font=self.font_status)
+        scroll_text(self.draw, zone_name, x=96-offset, y=0, step=scroll_step, font=self.font_status)
+        scroll_text(self.draw, self.current_title, x=offset, y=12, step=scroll_step, font=self.font8,is_center=True)
+        scroll_text(self.draw, self.current_artist + " - " + self.current_album, x=offset, y=24, step=scroll_step, font=self.font8,is_center=True)
                 
         ## draw the VU table
         if self.play_state == "playing":

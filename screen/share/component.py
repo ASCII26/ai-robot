@@ -1,7 +1,7 @@
 import random
 
 # 绘制左侧 VU 效果（32x32 区域）
-def draw_vu(draw, volume_level = 0.5):
+def draw_vu(draw, volume_level = 0.5,offset=0):
     bar_width = 1
     spacing = 3
     center_y = 17  # 屏幕中心点（32/2）
@@ -18,7 +18,7 @@ def draw_vu(draw, volume_level = 0.5):
             bar_height = max(2, min(max_height, 
                               bar_height + random.randint(-4, 4)))
         
-        x = 4 + i * (bar_width + spacing)
+        x = 4 + i * (bar_width + spacing) + offset
         
         # 绘制上半部分
         draw.rectangle((x, center_y - bar_height, 
@@ -29,16 +29,20 @@ def draw_vu(draw, volume_level = 0.5):
                        x + bar_width, center_y + bar_height), fill=255)
 
 # 右侧文字滚动
-def scroll_text(draw, text, x=32, y=0, step=0, font=None):
+def scroll_text(draw, text, x=32, y=0, step=0, font=None, is_center=False):
     text = f"{text} "
     stop_frames = 16  # 停顿的帧数
     # 计算文字宽度
     text_width = font.getlength(text)
-    available_width = 128 - x  # 可用宽度（总宽度128减去左侧32像素）
+    disp_width = 128
+    available_width = disp_width - x  # 可用宽度（总宽度128减去左侧32像素）
     
     if text_width <= available_width:
         # 文字不需要滚动，直接显示
-        draw.text((x, y), text, font=font, fill=255)
+        if is_center:
+            draw.text((x + (available_width - text_width) / 2, y), text, font=font, fill=255)
+        else:
+            draw.text((x, y), text, font=font, fill=255)
     else:
         # 文字需要滚动
         # 计算最大滚动距离

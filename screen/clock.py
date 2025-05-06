@@ -34,4 +34,4 @@ class ClockDisplay(DisplayPlugin):
         date_width = self.font8.getlength(current_date)
         x_date = (self.width - date_width) // 2
         y_date = 0
-        self.draw.text((x_date, y_date), current_date, font=self.font8, fill=255)
+        self.draw.text((x_date, y_date), "" + current_date, font=self.font_status, fill=255)

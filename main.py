@@ -14,13 +14,18 @@ from screen.dino import DinoGameDisplay
 from screen.life import LifeDisplay
 from screen.xiaozhi import XiaozhiDisplay
 
+from PIL import Image
+
 # add until plugins
 from until.log import LOGGER
 from until.input import KeyListener,ecodes
 from until.volume import adjust_volume,detect_pcm_controls
+from until.animation import Animation,Operator
 
 # contrast value
 CONTRAST = 128
+
+ANIMATION_DURATION = 0.5
 
 # add debug information
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -48,6 +53,10 @@ class DisplayManager:
         self.key_listener = KeyListener()
         self.last_active = None
         self.active_id = 0
+        self.last_screen_image = None
+        self.main_screen = Image.new("1", (self.disp.width, self.disp.height), 0)
+        self.anim = Animation(ANIMATION_DURATION)
+        self.anim.reset("main_screen")
         
         # init sleep
         self.sleep = False
@@ -64,7 +73,6 @@ class DisplayManager:
         self.add_plugin(LifeDisplay, auto_hide=False)
         self.add_plugin(AirPlayDisplay, auto_hide=True)
         self.add_plugin(RoonDisplay, auto_hide=False)
-        
         
         # register signal handler
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -86,6 +94,8 @@ class DisplayManager:
     def active_next(self):
         """activate the next plugin"""
         if self.last_active:
+            self.last_screen_image = self.last_active.get_image()
+            self.anim.reset("main_screen")
             self.last_active.set_active(False)
             
         next_id = (self.active_id + 1) % len(self.plugins)
@@ -150,9 +160,22 @@ class DisplayManager:
                 try:
                     self.last_active.update()
                     image = self.last_active.get_image()
-                    self.disp.getbuffer(image)
+                    screen_offset = 128
+                    
+                    if self.last_screen_image is not None:
+                        self.main_screen.paste(self.last_screen_image, (0, 0))
+                        
+                    
+                    if self.anim.is_running("main_screen"):
+                        screen_offset = int(self.anim.run("main_screen", self.disp.width))
+                        frame_time =  1.0 / 60.0
+                    else:
+                        frame_time = self.last_active.get_frame_time()
+                            
+                    self.main_screen.paste(image, (128-screen_offset, 0))
+                    self.disp.getbuffer(self.main_screen)
                     self.disp.ShowImage()
-                    frame_time = self.last_active.get_frame_time()
+                    
                 except Exception as e:
                     import traceback
                     LOGGER.error(f"错误堆栈: {traceback.format_exc()}")
@@ -174,7 +197,7 @@ class DisplayManager:
             self.cleanup(reset=True)
     
     def welcome(self):
-        self.disp.getbuffer(welcome_screen(self.disp.width, self.disp.height ,msg = "Hi.",logo_name="heart.png",logo_size=(24, 24)))
+        self.disp.getbuffer(welcome_screen(self.disp.width, self.disp.height ,msg = "Muspi",logo_name="heart.png",logo_size=(24, 24)))
         self.disp.ShowImage()
 
     def reset_sleep_timer(self):
