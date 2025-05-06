@@ -134,8 +134,9 @@ class AirPlayDisplay(DisplayPlugin):
         if self.current_title and self.current_artist:
             draw_scroll_text(self.draw, self.current_title, (offset, 10), width=100, font=self.font10, align="center")
             draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8, align="center")
-            draw_scroll_text(self.draw, "♪" + self.client_name, (58+offset, 0), font=self.font_status)
-            draw_scroll_text(self.draw, "AIRPLAY", (offset, 0), font=self.font_status)
+            #draw_scroll_text(self.draw, "♪" + self.client_name, (58+offset, 0), font=self.font_status)
+            draw_scroll_text(self.draw, "♪" + self.client_name, (offset, 0), width=104, font=self.font_status, align="center")
+            draw_scroll_text(self.draw, "A", (offset, 0), font=self.font_status)
 
         # draw the VU table
         if self.play_state == "play":

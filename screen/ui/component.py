@@ -7,7 +7,7 @@ SCROLL_SPEED = 0.2  # speed parameter, 1.0, means 1 unit per second
 STOP_FRAMES = 32  # 停顿的帧数
 
 # 绘制左侧 VU 效果（32x32 区域）
-def draw_vu(draw, volume_level = 0.5, offset_x=0, center_y=16):
+def draw_vu(draw, volume_level = 0.5, offset_x=0, center_y=14):
     bar_width = 1
     spacing = 3
     num_bars = 3   # 增加到4个柱状图
