@@ -5,8 +5,8 @@ import queue
 
 from until.log import LOGGER
 from .base import DisplayPlugin
-from .share.component import scroll_text, draw_vu
-from .share.icons import IconDrawer
+from .ui.component import draw_scroll_text, draw_vu
+from .ui.icons import IconDrawer
 
 class AirPlayDisplay(DisplayPlugin):
     def __init__(self, manager, width, height):
@@ -121,20 +121,20 @@ class AirPlayDisplay(DisplayPlugin):
         # self.icon_drawer.draw_airplay(x=24, y=0) 
         
         # draw the scrolling text
-        scroll_step = self.get_step_time()
+        offset = 0
         if self.current_title and self.current_artist:
-            scroll_text(self.draw, "♪AIRPLAY", x=24, y=0, step=scroll_step, font=self.font_status)
-            scroll_text(self.draw, self.current_title, x=24, y=12, step=scroll_step, font=self.font8,is_center=True)
-            scroll_text(self.draw, self.current_artist + " - " + self.current_album, x=24, y=24, step=scroll_step, font=self.font8,is_center=True)
+            draw_scroll_text(self.draw, "♪AIRPLAY", (offset, 0), font=self.font_status)
+            draw_scroll_text(self.draw, self.current_title, (offset, 12), width=100, font=self.font8, align="center")
+            draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8, align="center")
         
         # draw the VU table
         if self.play_state == "play":
-            draw_vu(self.draw, volume_level=volume) 
+            draw_vu(self.draw, volume_level=volume, offset_x=106) 
             if self.manager.sleep:
                 self.manager.turn_on_screen()
             # self.icon_drawer.draw_play(x=53, y=0)
         else:
-            draw_vu(self.draw, volume_level=0.0)
+            draw_vu(self.draw, volume_level=0.0, offset_x=106)
             # self.icon_drawer.draw_pause(x=53, y=0)
         
         # draw the volume wave icon

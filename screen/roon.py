@@ -5,8 +5,8 @@ from roonapi import RoonApi, RoonDiscovery
 
 from until.log import LOGGER
 from .base import DisplayPlugin
-from .share.component import scroll_text, draw_vu
-from .share.icons import IconDrawer
+from .ui.component import draw_scroll_text, draw_vu
+from .ui.icons import IconDrawer
 from until.input import ecodes
 
 SUFFIX = "[roon]" # 后缀, 监听 roon 的 output 名字
@@ -192,7 +192,7 @@ class RoonDisplay(DisplayPlugin):
         self.clear()
         
         if self.need_auth:
-            scroll_text(self.draw, "Please authorise first in roon app", x=0, y=10, step=0, font=self.font8)
+            draw_scroll_text(self.draw, "Please authorise first in roon app", x=0, y=10, step=0, font=self.font8)
             return
         
         # initialize the icon drawer
@@ -215,22 +215,21 @@ class RoonDisplay(DisplayPlugin):
         
         # draw the scrolling text
         zone_name = (self.zone_name or "no output").replace(SUFFIX, "")
-        scroll_step = self.get_step_time()
         
-        offset = 24
-        scroll_text(self.draw, "♪ROON", x=offset, y=0, step=scroll_step, font=self.font_status)
-        scroll_text(self.draw, zone_name, x=96-offset, y=0, step=scroll_step, font=self.font_status)
-        scroll_text(self.draw, self.current_title, x=offset, y=12, step=scroll_step, font=self.font8,is_center=True)
-        scroll_text(self.draw, self.current_artist + " - " + self.current_album, x=offset, y=24, step=scroll_step, font=self.font8,is_center=True)
+        offset = 0
+        draw_scroll_text(self.draw, "♪ROON", (offset, 0), font=self.font_status)
+        draw_scroll_text(self.draw, zone_name, (48+offset, 0), width=32, font=self.font_status)
+        draw_scroll_text(self.draw, self.current_title, (offset, 12), width=100, font=self.font8, align="center")
+        draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8,align="center")
                 
         ## draw the VU table
         if self.play_state == "playing":
-            draw_vu(self.draw, volume_level=volume)
+            draw_vu(self.draw, volume_level=volume, offset_x=106)
             if self.manager.sleep:
                 self.manager.turn_on_screen()
             # self.icon_drawer.draw_play(x=41, y=0)
         else:
-            draw_vu(self.draw, volume_level=0.0)
+            draw_vu(self.draw, volume_level=0.0, offset_x=106)
             # self.icon_drawer.draw_pause(x=41, y=0)
         
         ## draw the volume wave icon

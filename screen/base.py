@@ -16,7 +16,7 @@ def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(
     image = Image.new('1', (width, height))
     try:
         # 使用绝对路径打开图片
-        logo_path = os.path.join(BASE_DIR, "share", logo_name)
+        logo_path = os.path.join(BASE_DIR, "ui", logo_name)
         logo = Image.open(logo_path)
         # 调整图片大小
         logo = logo.resize(logo_size)
@@ -68,9 +68,7 @@ class DisplayPlugin(ABC):
 
         
         # Parameters
-        self.start_time = time.time()
         self.is_active = False # whether the plugin is active
-        self.speed = 0.2  # speed parameter, default 1.0, means 1 unit per second
         self.pause_timout = 30   # 30 seconds
 
         LOGGER.info(f"[\033[1m{self.name}\033[0m] initialized.")
@@ -113,11 +111,6 @@ class DisplayPlugin(ABC):
 
         self.is_active = active
     
-    def get_step_time(self):
-        """get the current step time, adjust according to the speed parameter"""
-        elapsed = time.time() - self.start_time
-        return int(elapsed * self.speed * 1000 / 16)  # 16ms is a unit
-
     def get_image(self):
         """get the current image"""
         return self.image

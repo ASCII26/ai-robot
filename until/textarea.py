@@ -22,7 +22,7 @@ class TextArea:
         
         # 加载默认字体
         if font is None:
-            font_path = os.path.join(os.path.dirname(__file__), 'fusion-pixel-8px-monospaced-zh_hans.ttf')
+            font_path = os.path.join(os.path.dirname(__file__), 'FusionPixel.ttf')
             self.font = ImageFont.truetype(font_path, 8)  # 使用8px字体
         else:
             self.font = font
