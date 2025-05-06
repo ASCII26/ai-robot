@@ -228,10 +228,10 @@ class RoonDisplay(DisplayPlugin):
             draw_vu(self.draw, volume_level=volume, offset_x=106)
             if self.manager.sleep:
                 self.manager.turn_on_screen()
-            # self.icon_drawer.draw_play(x=41, y=0)
+            draw_scroll_text(self.draw, "⏵", (94, 0), font=self.font_status)
         else:
             draw_vu(self.draw, volume_level=0.0, offset_x=106)
-            # self.icon_drawer.draw_pause(x=41, y=0)
+            draw_scroll_text(self.draw, "⏸", (94, 0), font=self.font_status)
         
         ## draw the volume wave icon
         # self.icon_drawer.draw_volume_wave(x=112, y=0, level=volume)
