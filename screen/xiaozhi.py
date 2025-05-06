@@ -441,7 +441,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.draw.bitmap((x, y), robot, fill=255)
         
         chatbox = self.text_area.render()
-        x = self.width + self.chatbox_offset_x  # 放在机器人右边
+        x = self.width + round(self.chatbox_offset_x)  # 放在机器人右边
         y = (self.height - chatbox.height) // 2
         self.draw.bitmap((x, y), chatbox, fill=255)
         

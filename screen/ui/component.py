@@ -7,11 +7,11 @@ SCROLL_SPEED = 0.2  # speed parameter, 1.0, means 1 unit per second
 STOP_FRAMES = 32  # 停顿的帧数
 
 # 绘制左侧 VU 效果（32x32 区域）
-def draw_vu(draw, volume_level = 0.5, offset_x=0, center_y=20):
+def draw_vu(draw, volume_level = 0.5, offset_x=0, center_y=14):
     bar_width = 1
     spacing = 3
     num_bars = 3   # 增加到4个柱状图
-    max_height = 7
+    max_height = 8
 
     # 获取当前音量级别
     for i in range(num_bars):
@@ -46,8 +46,8 @@ def draw_scroll_text(draw, text, position=(32, 0), width=None, font=None, align=
     bbox = font.getbbox(text)
     
     # 计算文字尺寸
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    text_width = bbox[2]
+    text_height = bbox[3]
     # print(f"text: {text}, text_width: {text_width}, visible_width: {visible_width}")
     
     if width is None:

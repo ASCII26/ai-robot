@@ -123,8 +123,8 @@ class AirPlayDisplay(DisplayPlugin):
         # draw the scrolling text
         offset = 0
         if self.current_title and self.current_artist:
-            draw_scroll_text(self.draw, self.current_title, (offset, 12), width=100, font=self.font8, align="center")
-            draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8, align="center")
+            draw_scroll_text(self.draw, self.current_title, (offset, 13), width=100, font=self.font8, align="center")
+            draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font_status, align="center")
             draw_scroll_text(self.draw, "♪AIRPLAY", (offset, 0), font=self.font_status)
 
         # draw the VU table
@@ -138,7 +138,7 @@ class AirPlayDisplay(DisplayPlugin):
             # self.icon_drawer.draw_pause(x=53, y=0)
         
         # draw the volume wave icon
-        self.icon_drawer.draw_volume_wave(x=110, y=0, level=volume)
+        self.icon_drawer.draw_volume_wave(x=86, y=0, level=volume)
             
     def is_playing(self):
         return self.play_state == "play"

@@ -5,7 +5,7 @@ class Animation:
     def __init__(self,duration=0.3):
         self.animation_list = {}
         self.default_duration = duration
-        self.default_operator = Operator.ease_linear
+        self.default_operator = Operator.ease_in_quad
 
     def reset(self,id,current=0):
         '''
@@ -65,7 +65,7 @@ class Animation:
         
         if self.animation_list[id]["start_time"] > 0:
             elapsed = time.time() - self.animation_list[id]["start_time"]
-            if elapsed < duration:
+            if elapsed <= duration:
                 current = self.animation_list[id]["current"]
                 progress = elapsed / duration
                 
@@ -77,7 +77,6 @@ class Animation:
 
                 current = current + (target - current) * progress
                 self.animation_list[id]["current"] = current
-                
                 return current
             else:
                 self.animation_list[id]["start_time"] = 0

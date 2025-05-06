@@ -8,7 +8,7 @@ from until.log import LOGGER
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONT_STATUS = ImageFont.truetype("./fonts/FusionPixel.ttf", 8)
 FONT_8 = ImageFont.truetype("./fonts/QuanPixel.ttf", 8)
-FONT_16 = ImageFont.truetype("./fonts/FusionPixel.ttf", 16)
+FONT_16 = ImageFont.truetype("./fonts/QuanPixel.ttf", 16)
 
 
 def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(24, 24)):

@@ -25,7 +25,7 @@ from until.animation import Animation,Operator
 # contrast value
 CONTRAST = 128
 
-ANIMATION_DURATION = 0.5
+ANIMATION_DURATION = 0.3
 
 # add debug information
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -167,10 +167,11 @@ class DisplayManager:
                         
                     
                     if self.anim.is_running("main_screen"):
-                        screen_offset = int(self.anim.run("main_screen", self.disp.width))
+                        screen_offset = round(self.anim.run("main_screen", self.disp.width))
                         frame_time =  1.0 / 60.0
                     else:
                         frame_time = self.last_active.get_frame_time()
+                        self.last_screen_image = None
                             
                     self.main_screen.paste(image, (128-screen_offset, 0))
                     self.disp.getbuffer(self.main_screen)
