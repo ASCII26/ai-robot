@@ -1,5 +1,6 @@
 import time
 from .base import DisplayPlugin
+from .ui.component import draw_scroll_text
 
 class ClockDisplay(DisplayPlugin):
     def __init__(self, manager, width, height):
@@ -23,15 +24,9 @@ class ClockDisplay(DisplayPlugin):
             time_str = time.strftime("%H:%M:%S")
         else:
             time_str = time.strftime("%H %M %S")
-        
-        text_width = self.font16.getlength(time_str)
-        x = (self.width - text_width) // 2
-        y = (self.height - 16) // 2 + 4
-        self.draw.text((x, y), time_str, font=self.font16, fill=255)
+
+        draw_scroll_text(self.draw, time_str, (0, 12), width=128, font=self.font16, align="center")
         
         # display date (small font, top center)
         current_date = time.strftime("%Y年%m月%d日")
-        date_width = self.font8.getlength(current_date)
-        x_date = (self.width - date_width) // 2
-        y_date = 0
-        self.draw.text((x_date, y_date), "" + current_date, font=self.font_status, fill=255)
+        draw_scroll_text(self.draw, "" + current_date, (-2, 2), width=128, font=self.font8, align="center")

@@ -18,6 +18,7 @@ class AirPlayDisplay(DisplayPlugin):
         self.current_artist = "show info"
         self.current_album = ""
         self.play_state = "pause"
+        self.client_name = ""
         self.stream_volume = None
         self.last_play_time = time.time()  # record the last play time
         self.metadata_queue = queue.Queue()
@@ -72,6 +73,12 @@ class AirPlayDisplay(DisplayPlugin):
                             self.metadata_queue.put(("play_state", "play"))
                         elif "Pause." in decoded_line:
                             self.metadata_queue.put(("play_state", "pause"))
+                        elif "The name of the AirPlay client is" in decoded_line:
+                            try:
+                                client_name = decoded_line.split('"')[1].strip()
+                                self.metadata_queue.put(("client_name", client_name))
+                            except:
+                                pass
                     else:
                         time.sleep(0.1)
                 except Exception as e:
@@ -102,6 +109,8 @@ class AirPlayDisplay(DisplayPlugin):
                     self.play_state = value
                 elif metadata_type == "volume":
                     self.stream_volume = value
+                elif metadata_type == "client_name":
+                    self.client_name = value
         except queue.Empty:
             pass
     
@@ -123,9 +132,10 @@ class AirPlayDisplay(DisplayPlugin):
         # draw the scrolling text
         offset = 0
         if self.current_title and self.current_artist:
-            draw_scroll_text(self.draw, self.current_title, (offset, 13), width=100, font=self.font8, align="center")
-            draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font_status, align="center")
-            draw_scroll_text(self.draw, "♪AIRPLAY", (offset, 0), font=self.font_status)
+            draw_scroll_text(self.draw, self.current_title, (offset, 10), width=100, font=self.font10, align="center")
+            draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8, align="center")
+            draw_scroll_text(self.draw, "♪" + self.client_name, (58+offset, 0), font=self.font_status)
+            draw_scroll_text(self.draw, "AIRPLAY", (offset, 0), font=self.font_status)
 
         # draw the VU table
         if self.play_state == "play":
@@ -138,7 +148,7 @@ class AirPlayDisplay(DisplayPlugin):
             # self.icon_drawer.draw_pause(x=53, y=0)
         
         # draw the volume wave icon
-        self.icon_drawer.draw_volume_wave(x=86, y=0, level=volume)
+        # self.icon_drawer.draw_volume_wave(x=86, y=0, level=volume)
             
     def is_playing(self):
         return self.play_state == "play"

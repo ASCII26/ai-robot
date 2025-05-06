@@ -217,11 +217,11 @@ class RoonDisplay(DisplayPlugin):
         zone_name = (self.zone_name or "no output").replace(SUFFIX, "")
         
         offset = 0
-        draw_scroll_text(self.draw, self.current_title, (offset, 13), width=100, font=self.font8, align="center")
-        draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font_status,align="center")
-        draw_scroll_text(self.draw, zone_name, (38+offset, 0), width=32, font=self.font_status)
+        draw_scroll_text(self.draw, self.current_title, (offset, 10), width=100, font=self.font10, align="center")
+        draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8,align="center")
+        draw_scroll_text(self.draw, "♪" + zone_name, (38+offset, 0), width=48, font=self.font_status)
         # draw_scroll_text(self.draw, zone_name, (offset, 0), width=100, font=self.font_status, align="center")
-        draw_scroll_text(self.draw, "♪ROON", (offset, 0), font=self.font_status)
+        draw_scroll_text(self.draw, "ROON", (offset, 0), font=self.font_status)
        
         ## draw the VU table
         if self.play_state == "playing":
@@ -234,7 +234,7 @@ class RoonDisplay(DisplayPlugin):
             # self.icon_drawer.draw_pause(x=41, y=0)
         
         ## draw the volume wave icon
-        self.icon_drawer.draw_volume_wave(x=86, y=0, level=volume)
+        # self.icon_drawer.draw_volume_wave(x=112, y=0, level=volume)
     
     def set_active(self, value):
         super().set_active(value)
