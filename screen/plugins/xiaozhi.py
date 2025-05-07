@@ -13,8 +13,8 @@ import subprocess
 from scipy import signal
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from .base import DisplayPlugin
-from evdev import ecodes
+from screen.base import DisplayPlugin
+from until.input import ecodes
 from until.log import LOGGER
 from until.emotion import RobotEmotion
 from until.textarea import TextArea
@@ -129,7 +129,7 @@ class XiaozhiDisplay(DisplayPlugin):
             self.is_activated = False
             self.activate_info = response_json['activation']
         else:
-            LOGGER.info(f"activation success, start mqtt client")
+            LOGGER.info("activation success, start mqtt client")
             self.mqtt_info = response_json['mqtt']
             self._create_mqtt_client(self.mqtt_info)
 
@@ -164,17 +164,17 @@ class XiaozhiDisplay(DisplayPlugin):
             if self.tts_state == "sentence_start":
                 self.is_speaking = True
                 if AUTO_CHATBOX:
-                    self._open_chatbox();
+                    self._open_chatbox()
                 self.text_area.append_text(msg['text'])
             elif self.tts_state == "sentence_end":
                 self.is_speaking = False
                 self.robot.set_emotion("neutral")
                 
         if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self.aes_opus_info['session_id']:
-            LOGGER.info(f"recv good bye msg")
+            LOGGER.info("recv good bye msg")
             self.text_area.append_text("bye.")
             if AUTO_CHATBOX:
-                self._close_chatbox();
+                self._close_chatbox()
             self.aes_opus_info['session_id'] = None
             self._close_udp_conn()
 
@@ -209,7 +209,7 @@ class XiaozhiDisplay(DisplayPlugin):
             try:
                 # 发送一个空数据包来唤醒 recvfrom
                 self.udp_socket.sendto(b'', (self.aes_opus_info['udp']['server'], self.aes_opus_info['udp']['port']))
-            except:
+            except socket.error:
                 pass
             finally:
                 self.udp_socket.close()
@@ -231,7 +231,7 @@ class XiaozhiDisplay(DisplayPlugin):
         if self.tts_state == "start" or self.tts_state == "entence_start":
             # 在播放状态下发送abort消息
             self._push_mqtt_msg({"type": "abort"})
-            LOGGER.info(f"send abort message")
+            LOGGER.info("send abort message")
         if self.aes_opus_info['session_id'] is not None:
             # if not self.conn_state:
             #     self._connect_udp()
@@ -289,7 +289,7 @@ class XiaozhiDisplay(DisplayPlugin):
                         encrypt_encoded_data = aes_ctr_encrypt(bytes.fromhex(key), bytes.fromhex(new_nonce), bytes(encoded_data))
                         data = bytes.fromhex(new_nonce) + encrypt_encoded_data
                         
-                        sent = self.udp_socket.sendto(data, (server_ip, server_port))
+                        self.udp_socket.sendto(data, (server_ip, server_port))
                     except Exception as e:
                         LOGGER.error(f"read audio data err: {e}")
                         break
@@ -353,7 +353,7 @@ class XiaozhiDisplay(DisplayPlugin):
                         try:
                             pcm_queue.get_nowait()
                             pcm_queue.put_nowait(decoded)
-                        except:
+                        except queue.Full:
                             pass
                 except Exception as e:
                     LOGGER.error(f"recv/decode audio err: {e}")

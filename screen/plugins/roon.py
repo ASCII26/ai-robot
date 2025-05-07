@@ -4,9 +4,9 @@ import queue
 from roonapi import RoonApi, RoonDiscovery
 
 from until.log import LOGGER
-from .base import DisplayPlugin
-from .ui.component import draw_scroll_text, draw_vu
-from .ui.icons import IconDrawer
+from screen.base import DisplayPlugin
+from screen.ui.component import draw_scroll_text, draw_vu
+from screen.ui.icons import IconDrawer
 from until.input import ecodes
 
 SUFFIX = "[roon]" # 后缀, 监听 roon 的 output 名字
@@ -216,22 +216,22 @@ class RoonDisplay(DisplayPlugin):
         # draw the scrolling text
         zone_name = (self.zone_name or "no output").replace(SUFFIX, "")
         
-        offset = 0
+        offset = 28
         draw_scroll_text(self.draw, self.current_title, (offset, 10), width=100, font=self.font10, align="center")
         draw_scroll_text(self.draw, self.current_artist + " - " + self.current_album, (offset, 24), width=100, font=self.font8,align="center")
         # draw_scroll_text(self.draw, "♪" + zone_name, (58+offset, 0), width=48, font=self.font_status)
-        draw_scroll_text(self.draw,  "♪" + zone_name, (offset, 0), width=104, font=self.font_status, align="center")
-        draw_scroll_text(self.draw, "R", (offset, 0), font=self.font_status)
+        draw_scroll_text(self.draw,  "♪" + zone_name, (6+offset, 0), width=90, font=self.font_status, align="center")
+        draw_scroll_text(self.draw, "R", (95+offset, 0), font=self.font_status)
        
         ## draw the VU table
         if self.play_state == "playing":
-            draw_vu(self.draw, volume_level=volume, offset_x=106)
+            draw_vu(self.draw, volume_level=volume)
             if self.manager.sleep:
                 self.manager.turn_on_screen()
-            draw_scroll_text(self.draw, "⏵", (94, 0), font=self.font_status)
+            draw_scroll_text(self.draw, "⏵", (offset, 0), font=self.font_status)
         else:
-            draw_vu(self.draw, volume_level=0.0, offset_x=106)
-            draw_scroll_text(self.draw, "⏸", (94, 0), font=self.font_status)
+            draw_vu(self.draw, volume_level=0.0)
+            draw_scroll_text(self.draw, "⏸", (offset, 0), font=self.font_status)
         
         ## draw the volume wave icon
         # self.icon_drawer.draw_volume_wave(x=112, y=0, level=volume)

@@ -1,6 +1,6 @@
 import time
 import random
-from .base import DisplayPlugin
+from screen.base import DisplayPlugin
 from until.input import ecodes
 from until.log import LOGGER
 

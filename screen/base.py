@@ -1,50 +1,10 @@
-import os
 from abc import ABC, abstractmethod
-from PIL import Image, ImageDraw, ImageFont
-import time
+from PIL import Image, ImageDraw
+from screen.fonts import Fonts
 from until.log import LOGGER
 
-# 获取当前文件所在目录
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_STATUS = ImageFont.truetype("./fonts/QuinqueFive.ttf", 5)
-FONT_8 = ImageFont.truetype("./fonts/fusion-pixel-8px.ttf", 8)
-FONT_10 = ImageFont.truetype("./fonts/fusion-pixel-10px.ttf", 10)
-FONT_12 = ImageFont.truetype("./fonts/fusion-pixel-12px.ttf", 12)
-FONT_16 = ImageFont.truetype("./fonts/fusion-pixel-8px.ttf", 16)
-
-
-def welcome_screen(width, height,msg = "Muspi", logo_name="logo.png",logo_size=(24, 24)):
-    """welcome screen"""
-    image = Image.new('1', (width, height))
-    try:
-        # 使用绝对路径打开图片
-        logo_path = os.path.join(BASE_DIR, "ui", logo_name)
-        logo = Image.open(logo_path)
-        # 调整图片大小
-        logo = logo.resize(logo_size)
-        # 转换为单色模式
-        logo = logo.convert('1')
-    except Exception as e:
-        LOGGER.error(f"无法加载logo图片: {e}")
-        logo = None
-    
-    draw = ImageDraw.Draw(image)
-    
-    # 绘制边框
-    draw.rectangle((0, 0, width-1, height-1), outline=255, width=1)
-    
-     # 绘制文字
-    draw.text((60, (height - 16) // 2), msg, font=FONT_16, fill=255)
-
-    # 如果logo加载成功，绘制logo
-    if logo:
-        x = (width - logo.width) // 5
-        y = (height - logo.height) // 2
-        image.paste(logo, (x, y))
-    
-    return image
-    
 DEFAULT_FRAME_TIME = 1.0 / 8.0  
+FONTS = Fonts()
 
 class DisplayPlugin(ABC):
     """Base class for display plugins"""
@@ -64,11 +24,11 @@ class DisplayPlugin(ABC):
         self.draw = ImageDraw.Draw(self.image)
         
         # Fonts
-        self.font_status = FONT_STATUS
-        self.font8 = FONT_8
-        self.font10 = FONT_10
-        self.font12 = FONT_12
-        self.font16 = FONT_16
+        self.font_status = FONTS.size_5
+        self.font8 = FONTS.size_8
+        self.font10 = FONTS.size_10
+        self.font12 = FONTS.size_12
+        self.font16 = FONTS.size_16
 
         
         # Parameters
@@ -82,13 +42,13 @@ class DisplayPlugin(ABC):
         """update the display content"""
         pass
     
+    # @abstractmethod
+    def event_listener(self):
+        """listen to the metadata"""
+        pass
 
     def is_playing(self):
         """check if the plugin is playing"""
-        pass
-
-    def event_listener(self):
-        """listen to the metadata"""
         pass
 
     def get_active(self):
