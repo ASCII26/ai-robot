@@ -20,7 +20,7 @@
         },
         {
             "name": "life",
-            "enabled": true,
+            "enabled": false,
             "auto_hide": false,
             "config": {}
         },

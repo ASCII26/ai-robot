@@ -26,7 +26,7 @@ class clock(DisplayPlugin):
             time_str = time.strftime("%H %M %S")
 
         draw_scroll_text(
-            self.draw, time_str, (0, 12), width=128, font=self.font16, align="center"
+            self.draw, time_str, (2, 12), width=128, font=self.font16, align="center"
         )
 
         # display date (small font, top center)
@@ -34,7 +34,7 @@ class clock(DisplayPlugin):
         draw_scroll_text(
             self.draw,
             "" + current_date,
-            (-2, 2),
+            (0, 2),
             width=128,
             font=self.font8,
             align="center",

@@ -16,10 +16,10 @@ from cryptography.hazmat.backends import default_backend
 from screen.base import DisplayPlugin
 from until.device.input import ecodes
 from until.log import LOGGER
+
 from ui.emotion import RobotEmotion
 from ui.textarea import TextArea
 from ui.animation import Animation,Operator
-
 
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
@@ -39,6 +39,13 @@ ROBOT_OFFSET_X = 34
 
 AUTO_CHATBOX = False
 
+class MESSAGE:
+    HELLO = {"type": "hello", "version": 3, "transport": "udp",
+                        "audio_params": {"format": "opus", "sample_rate": TARGET_RATE, "channels": 1, "frame_duration": 60}}
+    ABORT = {"type": "abort"}
+    LISTEN = {"type": "listen", "state": "start", "mode": "manual"}
+    STOP_LISTEN = {"type": "listen", "state": "stop"}
+    
 def get_mac_address():
     try:
         result = subprocess.run(['ifconfig', 'eth0'], capture_output=True, text=True)
@@ -79,11 +86,9 @@ class xiaozhi(DisplayPlugin):
         super().__init__(manager, width, height)
         
         self.mqtt_info = {}
-        self.activate_info = {}
-        self.aes_opus_info = {'session_id': None}
+        self._receive_msg = {'session_id': None}
         self.is_listening = False
         self.is_speaking = False
-        self.is_activated = True
         
         self.local_sequence = 0
         self.tts_state = None
@@ -105,24 +110,12 @@ class xiaozhi(DisplayPlugin):
         
         self.robot = RobotEmotion()
         self.text_area = TextArea(font=self.font8,width=CHATBOX_WIDTH,line_spacing=4)
-        
+
         # init audio & mqtt
         # self.audio = pyaudio.PyAudio()
         self.send_audio_thread = threading.Thread()
         self.recv_audio_thread = threading.Thread()
         self._get_ota_version()
-        
-        # show welcome message
-        self._open_chatbox()
-        self.text_area.append_text("你好.")
-        self.text_area.append_text("我是小派.")
-        self.text_area.append_text("---")
-        
-        
-        threading.Timer(
-            3,
-            lambda: self._close_chatbox()
-        ).start()
 
     def _get_ota_version(self):
         header = {
@@ -135,16 +128,12 @@ class xiaozhi(DisplayPlugin):
                                 "idf_version": "v5.3.2-dirty",
                                 "elf_sha256": "22986216df095587c42f8aeb06b239781c68ad8df80321e260556da7fcf5f522"}}
         response = requests.post(OTA_VERSION_URL, headers=header, data=json.dumps(post_data))
-        LOGGER.debug(response.text)
+        LOGGER.info(response.text)
         response_json = response.json()
-
-        if 'activation' in response_json and response_json['activation']:
-            self.is_activated = False
-            self.activate_info = response_json['activation']
-        else:
-            LOGGER.info("activation success, start mqtt client")
-            self.mqtt_info = response_json['mqtt']
-            self._create_mqtt_client(self.mqtt_info)
+        
+        self.mqtt_info = response_json['mqtt']
+        self._create_mqtt_client(self.mqtt_info)
+           
 
     def _create_mqtt_client(self, mqtt_config):
         self.mqttc = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, 
@@ -156,17 +145,28 @@ class xiaozhi(DisplayPlugin):
         self.mqttc.on_message = self._on_message
         self.mqttc.connect(host=mqtt_config['endpoint'], port=8883)
         self.mqttc.loop_start()
+        
+        self._push_mqtt_msg(MESSAGE.HELLO)
+        # show welcome message
+        self._open_chatbox()
+        self.text_area.append_text("你好.")
+        self.text_area.append_text("我是小派.")
+        self.text_area.append_text("---")
+        threading.Timer(
+            3,
+            lambda: self._close_chatbox()
+        ).start()
 
     def _on_connect(self, client, userdata, flags, rs, pr):
         LOGGER.info(f"connect to mqtt server at {self.mqtt_info['endpoint']}")
 
     def _on_message(self, client, userdata, message):
         msg = json.loads(message.payload)
-        LOGGER.info(f"recv message: {msg}")
+        LOGGER.info(f"recv: {msg}")
         self.sleep_time = time.time()  # reset sleep time
         
         if msg['type'] == 'hello':
-            self.aes_opus_info = msg
+            self._receive_msg = msg
             self._connect_udp()
             
         if msg['type'] == 'llm':
@@ -179,25 +179,35 @@ class xiaozhi(DisplayPlugin):
                 if AUTO_CHATBOX:
                     self._open_chatbox()
                 self.text_area.append_text(msg['text'])
+                
+                if "请登录到控制面板添加设备，输入验证码" in msg['text']:
+                    self._open_chatbox()
+                    self.robot.set_emotion("thinking")
+                    
             elif self.tts_state == "sentence_end":
                 self.is_speaking = False
                 self.robot.set_emotion("neutral")
+                if "请登录到控制面板添加设备，输入验证码" in msg['text']:
+                    self.text_area.append_text("一会见:)")
+                    self._receive_msg['session_id'] = None # 清空session_id
+                    self._close_udp_conn()
                 
-        if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self.aes_opus_info['session_id']:
+
+                
+        if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self._receive_msg['session_id']:
             LOGGER.info("recv good bye msg")
             self.text_area.append_text("bye.")
             if AUTO_CHATBOX:
                 self._close_chatbox()
-            self.aes_opus_info['session_id'] = None
+            self._receive_msg['session_id'] = None
             self._close_udp_conn()
 
-        
     def _connect_udp(self):
         if not self.udp_socket:
                 self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         
-        LOGGER.info(f"connect to {self.aes_opus_info['udp']['server']}:{self.aes_opus_info['udp']['port']}")
-        self.udp_socket.connect((self.aes_opus_info['udp']['server'], self.aes_opus_info['udp']['port']))
+        LOGGER.info(f"connect to {self._receive_msg['udp']['server']}:{self._receive_msg['udp']['port']}")
+        self.udp_socket.connect((self._receive_msg['udp']['server'], self._receive_msg['udp']['port']))
         self.conn_state = True
         self._start_audio_thread()
             
@@ -221,7 +231,7 @@ class xiaozhi(DisplayPlugin):
         if self.udp_socket:
             try:
                 # 发送一个空数据包来唤醒 recvfrom
-                self.udp_socket.sendto(b'', (self.aes_opus_info['udp']['server'], self.aes_opus_info['udp']['port']))
+                self.udp_socket.sendto(b'', (self._receive_msg['udp']['server'], self._receive_msg['udp']['port']))
             except socket.error:
                 pass
             finally:
@@ -229,44 +239,34 @@ class xiaozhi(DisplayPlugin):
                 self.udp_socket = None
         
     def _push_mqtt_msg(self, message):
+        LOGGER.info(f"send: {message}")
         self.mqttc.publish(self.mqtt_info['publish_topic'], json.dumps(message))
     
     def _on_listening(self):
         self.is_listening = True
         self.robot.set_emotion("listening")
         # 判断是否需要发送hello消息
-        if self.conn_state is False or self.aes_opus_info['session_id'] is None:
+        if self.conn_state is False or self._receive_msg['session_id'] is None:
             # 发送hello消息,建立udp连接
-            hello_msg = {"type": "hello", "version": 3, "transport": "udp",
-                        "audio_params": {"format": "opus", "sample_rate": TARGET_RATE, "channels": 1, "frame_duration": 60}}
-            self._push_mqtt_msg(hello_msg)
-            LOGGER.info(f"send hello message: {hello_msg}")
+            self._push_mqtt_msg(MESSAGE.HELLO)
         if self.tts_state == "start" or self.tts_state == "entence_start":
             # 在播放状态下发送abort消息
-            self._push_mqtt_msg({"type": "abort"})
-            LOGGER.info("send abort message")
-        if self.aes_opus_info['session_id'] is not None:
-            # if not self.conn_state:
-            #     self._connect_udp()
-                
+            self._push_mqtt_msg(MESSAGE.ABORT)
+        if self._receive_msg['session_id'] is not None:
             # 发送start listen消息
-            msg = {"session_id": self.aes_opus_info['session_id'], "type": "listen", "state": "start", "mode": "manual"}
-            LOGGER.info(f"send start msg: {msg}")
-            self._push_mqtt_msg(msg)
+            self._push_mqtt_msg({**MESSAGE.LISTEN, 'session_id': self._receive_msg['session_id']})
 
     def _off_listening(self):
         self.is_listening = False
         self.robot.set_emotion("neutral")
-        if self.aes_opus_info['session_id'] is not None:
-            msg = {"session_id": self.aes_opus_info['session_id'], "type": "listen", "state": "stop"}
-            LOGGER.info(f"send stop msg: {msg}")
-            self._push_mqtt_msg(msg)
+        if self._receive_msg['session_id'] is not None:
+            self._push_mqtt_msg({**MESSAGE.STOP_LISTEN, 'session_id': self._receive_msg['session_id']})
 
     def _send_audio(self):
-        key = self.aes_opus_info['udp']['key']
-        nonce = self.aes_opus_info['udp']['nonce']
-        server_ip = self.aes_opus_info['udp']['server']
-        server_port = self.aes_opus_info['udp']['port']
+        key = self._receive_msg['udp']['key']
+        nonce = self._receive_msg['udp']['nonce']
+        server_ip = self._receive_msg['udp']['server']
+        server_port = self._receive_msg['udp']['port']
         
         # 初始化Opus编码器
         encoder = opuslib.Encoder(TARGET_RATE, 1, opuslib.APPLICATION_AUDIO)
@@ -318,10 +318,10 @@ class xiaozhi(DisplayPlugin):
     
     def _recv_audio(self):
         import threading
-        key = self.aes_opus_info['udp']['key']
-        # nonce = self.aes_opus_info['udp']['nonce']
-        sample_rate = self.aes_opus_info['audio_params']['sample_rate']
-        frame_duration = self.aes_opus_info['audio_params']['frame_duration']
+        key = self._receive_msg['udp']['key']
+        # nonce = self._receive_msg['udp']['nonce']
+        sample_rate = self._receive_msg['audio_params']['sample_rate']
+        frame_duration = self._receive_msg['audio_params']['frame_duration']
         frame_num = int(sample_rate * (frame_duration / 1000 ))
 
         # LOGGER.debug(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
@@ -434,13 +434,6 @@ class xiaozhi(DisplayPlugin):
         self.clear()
         current_time = time.time()
         
-        if not self.is_activated:
-            activation_text = f"activation code: {self.activate_info['code']}"
-            text_width = self.font8.getlength(activation_text)
-            x = (self.width - text_width) // 2
-            y = 20
-            self.draw.text((x, y), activation_text, font=self.font8, fill=255)
-        
         if current_time - self.sleep_time > SLEEP_TIMEOUT:
             self._sleep()
         
@@ -486,7 +479,7 @@ class xiaozhi(DisplayPlugin):
             
             if evt.code == ecodes.KEY_KP2:
                 self.switch_chatbox()
-
+                
         if evt.value == 0:  # key down
             if evt.code == ecodes.KEY_KP1:
                 self._off_listening()

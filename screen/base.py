@@ -32,7 +32,6 @@ class DisplayPlugin(ABC):
         
         # Parameters
         self.is_active = False # whether the plugin is active
-        self.pause_timout = 30   # 30 seconds
 
         LOGGER.info(f"[\033[1m{self.name}\033[0m] initialized.")
 

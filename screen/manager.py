@@ -30,18 +30,18 @@ def _show_welcome(
         # 转换为单色模式
         logo = logo.convert("1")
     except Exception as e:
-        LOGGER.error(f"无法加载logo图片: {e}")
+        LOGGER.error(f"can't load icon: {e}")
         logo = None
 
     draw = ImageDraw.Draw(image)
 
-    # 绘制边框
+    # draw border
     draw.rectangle((0, 0, width - 1, height - 1), outline=255, width=1)
 
-    # 绘制文字
+    # draw text
     draw.text((60, (height - 16) // 2), msg, font=FONTS.size_16, fill=255)
 
-    # 如果logo加载成功，绘制logo
+    # if logo loaded, draw logo
     if logo:
         x = (width - logo.width) // 5
         y = (height - logo.height) // 2
@@ -107,7 +107,7 @@ class DisplayManager:
 
         next_id = (self.active_id + 1) % len(self.plugins)
 
-        # 检查下一个插件是否是播放器且未在播放
+        # check if the next plugin is a player and not playing
         while (
             self.plugins[next_id]["auto_hide"]
             and hasattr(self.plugins[next_id]["plugin"], "is_playing")
@@ -214,7 +214,7 @@ class DisplayManager:
             _show_welcome(
                 self.disp.width,
                 self.disp.height,
-                msg="Loading",
+                msg="Muspi",
                 logo_name="heart.png",
                 logo_size=(24, 24),
             )

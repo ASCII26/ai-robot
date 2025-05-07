@@ -9,6 +9,18 @@ from assets.icons import IconDrawer
 
 from until.log import LOGGER
 from until.device.input import ecodes
+from until.config import config
+
+# config path
+CONFIG_PATH = "config/roon.json"
+
+ROON_PLUGIN_INFO = {
+    "extension_id": "Muspi_Extension",
+    "display_name": "Muspi Roon Extension",
+    "display_version": "1.0",
+    "publisher": "Muspi",
+    "email": "puterjam@gmail.com",
+}
 
 SUFFIX = "[roon]" # 后缀, 监听 roon 的 output 名字
  
@@ -30,54 +42,19 @@ class roon(DisplayPlugin):
         self._start_roon_thread()
 
         self.need_auth = False
+        self.pause_timout = 30
+        
+        self.ready = False
 
     def _start_roon_thread(self):
-        def roon_auth():
-            # self.set_active(True)
-            # RoonDiscovery
-            discover = RoonDiscovery(self.core_id)
-            servers = discover.all()
-            discover.stop()
-
-            apis = [RoonApi(self.appinfo, None, server[0], server[1], False) for server in servers]
-            auth_api = []
-            while len(auth_api) == 0:
-                LOGGER.info("Waiting for roon server authorisation")
-                time.sleep(1)
-                auth_api = [api for api in apis if api.token is not None]
-
-            api = auth_api[0]
-            LOGGER.info("Got roon server authorisation.")
-            
-            # This is what we need to reconnect
-            self.core_id = api.core_id
-            self.token = api.token
-
-            # Save the token for next time
-            with open("config/roon_core_id", "w") as f:
-                f.write(self.core_id)
-            with open("config/roon_token", "w") as f:
-                f.write(self.token)
-
-            for api in apis:
-                api.stop()
-
-            self.need_auth = False
-
         def roon_thread():
-            # 初始化 Roon
-            self.appinfo = {
-                "extension_id": "Muspi_Extension",
-                "display_name": "Muspi Roon Extension",
-                "display_version": "1.0",
-                "publisher": "Muspi",
-                "email": "puterjam@gmail.com",
-            }
-
+            # initialize Roon
             try:
-                self.core_id = open("config/roon_core_id").read()
-                self.token = open("config/roon_token").read()
-            except OSError:
+                # load core_id and token from config file
+                config_data = config.open(CONFIG_PATH)
+                self.core_id = config_data["core_id"]
+                self.token = config_data["token"]
+            except Exception:
                 LOGGER.warning("Please authorise first in roon app")
                 self.need_auth = True
 
@@ -92,10 +69,19 @@ class roon(DisplayPlugin):
                 server = discover.first()
                 discover.stop()
                 
-                self.roon = RoonApi(self.appinfo, self.token, host=server[0], port=server[1])
-                self.metadata_queue.put(("roon_init", True))  # 通知初始化完成
+                self.roon = RoonApi(ROON_PLUGIN_INFO, self.token, host=server[0], port=server[1])                
 
                 LOGGER.info(f"Roon initialized in \033[1m\033[32m{self.roon.core_name}\033[0m.")
+
+                # Save the token for next time
+                config.save(CONFIG_PATH, {
+                    "core_id": self.roon.core_id,
+                    "token": self.roon.token
+                })       
+                
+                self.ready = True
+                self.need_auth = False
+        
                 while True:
                     try:
                         zones = self.roon.zones
@@ -149,7 +135,31 @@ class roon(DisplayPlugin):
                 
             except Exception as e:
                 LOGGER.error(f"Roon initialization error: {e}")
-                self.metadata_queue.put(("roon_init", False))
+                self.ready = False
+        
+        def roon_auth():
+            # self.set_active(True)
+            # RoonDiscovery
+            discover = RoonDiscovery(self.core_id)
+            servers = discover.all()
+            discover.stop()
+
+            apis = [RoonApi(ROON_PLUGIN_INFO, None, server[0], server[1], False) for server in servers]
+            auth_api = []
+            while len(auth_api) == 0:
+                LOGGER.info("Waiting for roon server authorisation")
+                time.sleep(1)
+                auth_api = [api for api in apis if api.token is not None]
+
+            api = auth_api[0]
+            LOGGER.info("Got roon server authorisation.")
+            
+            # This is what we need to reconnect
+            self.core_id = api.core_id
+            self.token = api.token
+
+            for api in apis:
+                api.stop()
         
         # 启动 Roon 线程
         self.roon_thread = threading.Thread(target=roon_thread, daemon=True)
@@ -193,7 +203,8 @@ class roon(DisplayPlugin):
         self.clear()
         
         if self.need_auth:
-            draw_scroll_text(self.draw, "Please authorise first in roon app", x=0, y=10, step=0, font=self.font8)
+            draw_scroll_text(self.draw, "Need Authorise", (0, 8), font=self.font8, width=128, align="center")
+            draw_scroll_text(self.draw, "Please Open Roon App", (0, 18), font=self.font8, width=128, align="center")
             return
         
         # initialize the icon drawer
@@ -212,7 +223,10 @@ class roon(DisplayPlugin):
                 volume = (80 + self.volume["value"]) / 80
             else:
                 volume = 0.5
-
+        
+        if not self.ready:
+            self.need_auth = True
+            return
         
         # draw the scrolling text
         zone_name = (self.zone_name or "no output").replace(SUFFIX, "")

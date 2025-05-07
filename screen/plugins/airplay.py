@@ -22,6 +22,7 @@ class airplay(DisplayPlugin):
         self.stream_volume = None
         self.last_play_time = time.time()  # record the last play time
         self.metadata_queue = queue.Queue()
+        self.pause_timout = 30
         self._start_metadata_reader()
         
     

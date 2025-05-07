@@ -1,10 +1,12 @@
-import json
 import importlib
-from pathlib import Path
 from until.log import LOGGER
 from screen.manager import DisplayManager
+from until.config import config
 
-# 预加载所有插件模块
+# config path
+CONFIG_PATH = "config/plugins.json"
+
+# preload all plugin modules
 PLUGIN_MODULES = {
     'xiaozhi': importlib.import_module('screen.plugins.xiaozhi'),
     'clock': importlib.import_module('screen.plugins.clock'),
@@ -18,19 +20,11 @@ class PluginManager:
     def __init__(self, manager: DisplayManager):
         self.manager = manager
         self.plugin_classes = {}
-        self.config = self._load_config()
+        self.config = config.open(CONFIG_PATH)
         
-    def _load_config(self):
-        """加载插件配置文件"""
-        config_path = Path("config/plugins.json")
-        if not config_path.exists():
-            return {"plugins": []}
-            
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
             
     def load(self):
-        """根据配置加载插件"""
+        """load plugins according to the config"""
         for plugin_info in self.config["plugins"]:
             if not plugin_info["enabled"]:
                 continue
@@ -41,14 +35,14 @@ class PluginManager:
                     LOGGER.error(f"Plugin module not found: {plugin_name}")
                     continue
                     
-                # 从预加载的模块中获取插件类
+                # get plugin class from the preloaded module
                 module = PLUGIN_MODULES[plugin_name]
                 plugin_class = getattr(module, plugin_info["name"])
                 
-                # 添加到插件列表
+                # add to plugin list
                 self.plugin_classes[plugin_info["name"]] = plugin_class
                 
-                # 设置插件状态
+                # set plugin status
                 self.manager.add_plugin(plugin_class, auto_hide=plugin_info["auto_hide"])
                 
             except Exception as e:
