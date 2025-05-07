@@ -1,5 +1,3 @@
-from PIL import Image, ImageDraw
-
 class Icons:
     size=6 #icon size
     

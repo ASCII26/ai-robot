@@ -1,6 +1,6 @@
 import random
 from screen.base import DisplayPlugin
-from until.input import ecodes
+from until.device.input import ecodes
 
 GAME_FRAME_TIME = 1 / 30
 

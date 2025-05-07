@@ -5,8 +5,8 @@ import queue
 
 from until.log import LOGGER
 from screen.base import DisplayPlugin
-from screen.ui.component import draw_scroll_text, draw_vu
-from screen.ui.icons import IconDrawer
+from ui.component import draw_scroll_text, draw_vu
+from assets.icons import IconDrawer
 
 class airplay(DisplayPlugin):
     def __init__(self, manager, width, height):

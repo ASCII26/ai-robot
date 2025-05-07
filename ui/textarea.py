@@ -1,8 +1,8 @@
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import os
-from until.animation import Animation
-from until.matrix import Matrix
+from ui.animation import Animation
+from ui.matrix import Matrix
 
 # 绘制一个简单的图案
 ARROW_PATTERN = [

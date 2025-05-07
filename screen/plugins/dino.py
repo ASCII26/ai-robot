@@ -1,7 +1,7 @@
 import time
 import random
 from screen.base import DisplayPlugin
-from until.input import ecodes
+from until.device.input import ecodes
 
 # 游戏参数
 WIDTH = 128

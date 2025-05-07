@@ -1,6 +1,6 @@
 import time
 from screen.base import DisplayPlugin
-from screen.ui.component import draw_scroll_text
+from ui.component import draw_scroll_text
 
 
 class clock(DisplayPlugin):

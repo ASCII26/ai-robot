@@ -14,11 +14,11 @@ from scipy import signal
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from screen.base import DisplayPlugin
-from until.input import ecodes
+from until.device.input import ecodes
 from until.log import LOGGER
-from until.emotion import RobotEmotion
-from until.textarea import TextArea
-from until.animation import Animation,Operator
+from ui.emotion import RobotEmotion
+from ui.textarea import TextArea
+from ui.animation import Animation,Operator
 
 
 

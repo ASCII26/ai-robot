@@ -4,11 +4,11 @@ import signal
 
 from pathlib import Path
 from PIL import Image, ImageDraw
-from until.input import KeyListener, ecodes
-from until.volume import adjust_volume, detect_pcm_controls
-from until.animation import Animation
+from until.device.input import KeyListener, ecodes
+from until.device.volume import adjust_volume, detect_pcm_controls
+from ui.animation import Animation
 from until.log import LOGGER
-from screen.ui.fonts import Fonts
+from ui.fonts import Fonts
 
 # contrast value
 CONTRAST = 128

@@ -2,13 +2,13 @@ from PIL import Image, ImageDraw
 import random
 import time
 import math
-from until.animation import Animation
-from until.matrix import Matrix
-from until.emotion_pattern import PATTERN
+from ui.animation import Animation
+from ui.matrix import Matrix
+
+from .emotion_pattern import PATTERN
 
 WIDTH, HEIGHT = 80, 32  # 修改宽度为80
 LOOK_DURATION = 2  # 每个位置停留2秒
-
 
 EMOTIONS = {
             "neutral": {"left_eye": "open", "right_eye": "open","mask_rotation": [10,15]},
