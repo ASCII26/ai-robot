@@ -4,7 +4,7 @@ from until.input import ecodes
 
 GAME_FRAME_TIME = 1 / 30
 
-class LifeDisplay(DisplayPlugin):
+class life(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "life"
         super().__init__(manager, width, height)

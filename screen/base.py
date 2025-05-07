@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from PIL import Image, ImageDraw
-from screen.fonts import Fonts
 from until.log import LOGGER
+from screen.manager import FONTS
 
 DEFAULT_FRAME_TIME = 1.0 / 8.0  
-FONTS = Fonts()
 
 class DisplayPlugin(ABC):
     """Base class for display plugins"""

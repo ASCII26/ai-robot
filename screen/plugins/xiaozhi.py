@@ -51,10 +51,6 @@ def get_mac_address():
         pass
     return 'a8:47:cb:ec:aa:gf'  # 如果获取失败，返回默认值
 
-MAC_ADDR = get_mac_address()
-
-LOGGER.info(f"get mac address: {MAC_ADDR}")
-
 def resample_audio(data, original_rate, target_rate):
     """将音频数据从原始采样率重采样到目标采样率"""
     # 将字节数据转换为 numpy 数组
@@ -77,7 +73,7 @@ def aes_ctr_decrypt(key, nonce, ciphertext):
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
     return plaintext
 
-class XiaozhiDisplay(DisplayPlugin):
+class xiaozhi(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "xiaozhi"
         super().__init__(manager, width, height)
@@ -95,6 +91,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.udp_socket = None
         self.conn_state = False
         self.mqttc = None
+        self.mac_addr = get_mac_address()
         
         # 动画相关属性
         self.robot_offset_x = 0
@@ -121,6 +118,7 @@ class XiaozhiDisplay(DisplayPlugin):
         self.text_area.append_text("我是小派.")
         self.text_area.append_text("---")
         
+        
         threading.Timer(
             3,
             lambda: self._close_chatbox()
@@ -128,10 +126,10 @@ class XiaozhiDisplay(DisplayPlugin):
 
     def _get_ota_version(self):
         header = {
-            'Device-Id': MAC_ADDR,
+            'Device-Id': self.mac_addr,
             'Content-Type': 'application/json'
         }
-        post_data = {"flash_size": 16777216, "minimum_free_heap_size": 8318916, "mac_address": f"{MAC_ADDR}",
+        post_data = {"flash_size": 16777216, "minimum_free_heap_size": 8318916, "mac_address": f"{self.mac_addr}",
                 "chip_model_name": "esp32s3", "chip_info": {"model": 9, "cores": 2, "revision": 2, "features": 18},
                 "application": {"name": "Muspi", "version": "0.9.9", "compile_time": "Jan 22 2025T20:40:23Z",
                                 "idf_version": "v5.3.2-dirty",
@@ -321,7 +319,7 @@ class XiaozhiDisplay(DisplayPlugin):
     def _recv_audio(self):
         import threading
         key = self.aes_opus_info['udp']['key']
-        nonce = self.aes_opus_info['udp']['nonce']
+        # nonce = self.aes_opus_info['udp']['nonce']
         sample_rate = self.aes_opus_info['audio_params']['sample_rate']
         frame_duration = self.aes_opus_info['audio_params']['frame_duration']
         frame_num = int(sample_rate * (frame_duration / 1000 ))

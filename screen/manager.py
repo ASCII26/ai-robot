@@ -1,32 +1,29 @@
 import time
 import sys
 import signal
-import os
 
+from pathlib import Path
 from PIL import Image, ImageDraw
-
-from drive import SSD1305
 from until.input import KeyListener, ecodes
 from until.volume import adjust_volume, detect_pcm_controls
 from until.animation import Animation
 from until.log import LOGGER
-from screen.fonts import Fonts
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+from screen.ui.fonts import Fonts
 
 # contrast value
 CONTRAST = 128
 ANIMATION_DURATION = 0.3
 FONTS = Fonts()
 
-def welcome_screen(
+def _show_welcome(
     width, height, msg="Muspi", logo_name="logo.png", logo_size=(24, 24)
 ):
-    """welcome screen"""
+    """show welcome screen"""
     image = Image.new("1", (width, height))
     try:
         # 使用绝对路径打开图片
-        logo_path = os.path.join(BASE_DIR, "ui", logo_name)
+        logo_path = Path("assets/icons/" + logo_name).resolve()
+
         logo = Image.open(logo_path)
         # 调整图片大小
         logo = logo.resize(logo_size)
@@ -54,10 +51,14 @@ def welcome_screen(
 
 
 class DisplayManager:
-    def __init__(self):
+    def __init__(self, disp=None):
         """Initialize the display manager"""
         # init display
-        self.disp = SSD1305.SSD1305()
+        if disp is None:
+            LOGGER.error("display is not initialized")
+            sys.exit(1)
+
+        self.disp = disp
         self.turn_on_screen()
         self.welcome()
 
@@ -79,16 +80,10 @@ class DisplayManager:
 
         # initialize plugins
         self.plugins = []
-        # self.add_plugin(XiaozhiDisplay, auto_hide=False)
-        # self.add_plugin(ClockDisplay, auto_hide=False)
-        # self.add_plugin(DinoGameDisplay, auto_hide=False)
-        # self.add_plugin(LifeDisplay, auto_hide=False)
-        # self.add_plugin(AirPlayDisplay, auto_hide=True)
-        # self.add_plugin(RoonDisplay, auto_hide=False)
 
         # register signal handler
-        signal.signal(signal.SIGTERM, self.signal_handler)
-        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
 
     def add_plugin(self, plugin, auto_hide=False):
         id = len(self.plugins)
@@ -122,7 +117,7 @@ class DisplayManager:
 
         self.plugins[next_id]["plugin"].set_active(True)
 
-    def signal_handler(self, signum, frame):
+    def _signal_handler(self, signum, frame):
         """handle the termination signal"""
         LOGGER.info(f"get signal {signum}, cleaning up...")
         self.cleanup()
@@ -207,19 +202,19 @@ class DisplayManager:
 
         except KeyboardInterrupt:
             LOGGER.warning("received keyboard interrupt, cleaning up...")
-            self.cleanup(reset=False)
+            self.cleanup(False)
         except Exception as e:
             LOGGER.error(f"runtime error: {e}")
-            self.cleanup(reset=False)
+            self.cleanup(False)
         finally:
-            self.cleanup(reset=True)
+            self.cleanup(True)
 
     def welcome(self):
         self.disp.getbuffer(
-            welcome_screen(
+            _show_welcome(
                 self.disp.width,
                 self.disp.height,
-                msg="Muspi",
+                msg="Loading",
                 logo_name="heart.png",
                 logo_size=(24, 24),
             )
@@ -253,7 +248,7 @@ class DisplayManager:
     def cleanup(self, reset=True):
         self.disp.clear()
         if not reset:
-            self.disp.getbuffer(welcome_screen(self.disp.width, self.disp.height))
+            self.disp.getbuffer(_show_welcome(self.disp.width, self.disp.height))
             self.disp.ShowImage()
         else:
             self.disp.ShowImage()

@@ -1,0 +1,40 @@
+{
+    "plugins": [
+        {
+            "name": "xiaozhi",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
+        },
+        {
+            "name": "clock",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
+        },
+        {
+            "name": "dino",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
+        },
+        {
+            "name": "life",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
+        },
+        {
+            "name": "airplay",
+            "enabled": true,
+            "auto_hide": true,
+            "config": {}
+        },
+        {
+            "name": "roon",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
+        }
+    ]
+} 

@@ -8,7 +8,7 @@ from screen.base import DisplayPlugin
 from screen.ui.component import draw_scroll_text, draw_vu
 from screen.ui.icons import IconDrawer
 
-class AirPlayDisplay(DisplayPlugin):
+class airplay(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "airplay"
         super().__init__(manager, width, height)

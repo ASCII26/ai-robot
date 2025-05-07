@@ -42,13 +42,17 @@ Device_SPI = 1
 Device_I2C = 0
 
 class RaspberryPi:
-    def __init__(self,spi=spidev.SpiDev(0,0),spi_freq=40000000,rst = 27,dc = 25,bl = 18,bl_freq=1000,i2c=None):
+    def __init__(self,spi=None,spi_freq=40000000,rst = 27,dc = 25,bl = 18,bl_freq=1000,i2c=None):
         self.INPUT = False
         self.OUTPUT = True
         
         if(Device_SPI == 1):
             self.Device = Device_SPI
-            self.spi = spi
+            if spi is None:
+                self.spi = spidev.SpiDev()
+                self.spi.open(0, 0)
+            else :
+                self.spi = spi
         else :
             self.Device = Device_I2C
             self.address = 0x3c

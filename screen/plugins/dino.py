@@ -130,7 +130,7 @@ def get_dino_sprite(type):
     sprite.extend(legs)  # 添加腿部
     return sprite
 
-class Dino:
+class DinoGame:
     def __init__(self):
         self.x = 10
         self.y = GROUND_Y - DINO_HEIGHT
@@ -210,7 +210,7 @@ class Obstacle:
                     draw.point((int(self.x) + j, int(self.y) + i), fill=255)
 
 # 恐龙游戏显示类
-class DinoGameDisplay(DisplayPlugin):
+class dino(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "dino"
         super().__init__(manager, width, height)
@@ -218,7 +218,7 @@ class DinoGameDisplay(DisplayPlugin):
         self.reset_game()
         
     def reset_game(self, player="AI"):
-        self.dino = Dino()
+        self.dino = DinoGame()
         self.obstacles = []
         self.score = 0
         self.game_over = False

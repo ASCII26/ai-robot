@@ -11,7 +11,7 @@ from until.input import ecodes
 
 SUFFIX = "[roon]" # 后缀, 监听 roon 的 output 名字
  
-class RoonDisplay(DisplayPlugin):
+class roon(DisplayPlugin):
     def __init__(self, manager, width, height):
         self.name = "roon"
         super().__init__(manager, width, height)
