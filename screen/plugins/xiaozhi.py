@@ -89,6 +89,7 @@ class xiaozhi(DisplayPlugin):
         self._receive_msg = {'session_id': None}
         self.is_listening = False
         self.is_speaking = False
+        self.need_add_device = False
         
         self.local_sequence = 0
         self.tts_state = None
@@ -128,7 +129,7 @@ class xiaozhi(DisplayPlugin):
                                 "idf_version": "v5.3.2-dirty",
                                 "elf_sha256": "22986216df095587c42f8aeb06b239781c68ad8df80321e260556da7fcf5f522"}}
         response = requests.post(OTA_VERSION_URL, headers=header, data=json.dumps(post_data))
-        LOGGER.info(response.text)
+        LOGGER.debug(response.text)
         response_json = response.json()
         
         self.mqtt_info = response_json['mqtt']
@@ -146,7 +147,6 @@ class xiaozhi(DisplayPlugin):
         self.mqttc.connect(host=mqtt_config['endpoint'], port=8883)
         self.mqttc.loop_start()
         
-        self._push_mqtt_msg(MESSAGE.HELLO)
         # show welcome message
         self._open_chatbox()
         self.text_area.append_text("你好.")
@@ -167,6 +167,7 @@ class xiaozhi(DisplayPlugin):
         
         if msg['type'] == 'hello':
             self._receive_msg = msg
+            self.need_add_device = False
             self._connect_udp()
             
         if msg['type'] == 'llm':
@@ -180,19 +181,19 @@ class xiaozhi(DisplayPlugin):
                     self._open_chatbox()
                 self.text_area.append_text(msg['text'])
                 
-                if "请登录到控制面板添加设备，输入验证码" in msg['text']:
+                if msg.get('text') and "请登录到控制面板添加设备，输入验证码" in msg['text']:
                     self._open_chatbox()
                     self.robot.set_emotion("thinking")
+                    self.need_add_device = True
                     
-            elif self.tts_state == "sentence_end":
-                self.is_speaking = False
-                self.robot.set_emotion("neutral")
-                if "请登录到控制面板添加设备，输入验证码" in msg['text']:
+            elif self.tts_state == "sentence_end" or self.tts_state == "stop":
+                if self.need_add_device:
                     self.text_area.append_text("一会见:)")
                     self._receive_msg['session_id'] = None # 清空session_id
                     self._close_udp_conn()
                 
-
+                self.is_speaking = False
+                self.robot.set_emotion("neutral")
                 
         if msg['type'] == 'goodbye' and self.udp_socket and msg['session_id'] == self._receive_msg['session_id']:
             LOGGER.info("recv good bye msg")
