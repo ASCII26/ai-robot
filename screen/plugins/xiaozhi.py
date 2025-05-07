@@ -4,11 +4,11 @@ import requests
 import paho.mqtt.client as mqtt
 import threading
 import queue
-# import pyaudio
 import opuslib
 import socket
 import numpy as np
 import subprocess
+import re
 
 from scipy import signal
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -23,7 +23,6 @@ from until.animation import Animation,Operator
 
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
-MAC_ADDR = 'b8:27:eb:bc:fa:ef'
 
 # 设备采样率
 DEVICE_RATE = 48000
@@ -39,6 +38,22 @@ CHATBOX_WIDTH = 62 # 聊天框宽度
 ROBOT_OFFSET_X = 34
 
 AUTO_CHATBOX = False
+
+def get_mac_address():
+    try:
+        result = subprocess.run(['ifconfig', 'eth0'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # 使用正则表达式匹配MAC地址
+            mac = re.search(r'([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}', result.stdout)
+            if mac:
+                return mac.group(0)
+    except Exception:
+        pass
+    return 'a8:47:cb:ec:aa:gf'  # 如果获取失败，返回默认值
+
+MAC_ADDR = get_mac_address()
+
+LOGGER.info(f"get mac address: {MAC_ADDR}")
 
 def resample_audio(data, original_rate, target_rate):
     """将音频数据从原始采样率重采样到目标采样率"""
@@ -122,7 +137,7 @@ class XiaozhiDisplay(DisplayPlugin):
                                 "idf_version": "v5.3.2-dirty",
                                 "elf_sha256": "22986216df095587c42f8aeb06b239781c68ad8df80321e260556da7fcf5f522"}}
         response = requests.post(OTA_VERSION_URL, headers=header, data=json.dumps(post_data))
-        LOGGER.info(response.text)
+        LOGGER.debug(response.text)
         response_json = response.json()
 
         if 'activation' in response_json and response_json['activation']:

@@ -23,7 +23,6 @@ def detect_pcm_controls():
         
         # filter out controllers containing PCM
         pcm_controls = [f"{name},{index}" for name, index in controls if "PCM" in name]
-        LOGGER.info(pcm_controls)
 
         for control in pcm_controls:
             # check if each PCM controller has Playback limit

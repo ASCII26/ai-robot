@@ -1,7 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import os
-import time
 from until.animation import Animation
 from until.matrix import Matrix
 

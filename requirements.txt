@@ -2,7 +2,7 @@
 Pillow>=10.0.0  # PIL 图像处理库
 
 # Roon 相关
-roonapi>=1.0.0  # Roon API 客户端
+roonapi>=0.1.6  # Roon API 客户端
 
 # 驱动相关
 evdev>=1.0.0  # 事件驱动设备库
@@ -10,3 +10,11 @@ gpiozero>=1.0.0  # GPIO 库
 smbus>=1.0.0  # I2C 库
 spidev>=1.0.0  # SPI 库
 smbus2>=0.4.1  # I2C 库
+pyinotify>=0.9.6  # 文件监控库
+
+# 音频与小智相关
+opuslib>=3.0.1  # Opus 音频库
+numpy>=2.2.5  # 科学计算库
+scipy>=1.15.2  # 科学计算库
+cryptography>=41.0.1  # 加密库
+paho-mqtt>=2.1.0  # MQTT 库

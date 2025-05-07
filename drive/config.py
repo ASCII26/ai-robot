@@ -31,8 +31,8 @@
 import time
 from smbus import SMBus
 import spidev
-import ctypes
-from gpiozero import *
+# import ctypes
+from gpiozero import DigitalOutputDevice,DigitalInputDevice,PWMOutputDevice
 
 # Pin definition
 RST_PIN         = 25

@@ -2,7 +2,6 @@ import time
 import random
 from screen.base import DisplayPlugin
 from until.input import ecodes
-from until.log import LOGGER
 
 # 游戏参数
 WIDTH = 128

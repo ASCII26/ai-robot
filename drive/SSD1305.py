@@ -118,11 +118,11 @@ class SSD1305(object):
             self.command(0xB0 + page)
             # set low column address #
             if self.rotation == 0:
-                self.command(0x04);  # 增加4像素偏移
+                self.command(0x04)  # 增加4像素偏移
             else:
-                self.command(0x00);
+                self.command(0x00)
             # set high column address #
-            self.command(0x10); 
+            self.command(0x10) 
             # write data #
             # time.sleep(0.01)
             if(self.Device == Device_SPI):
@@ -130,7 +130,7 @@ class SSD1305(object):
             for i in range(0,self.width):
                 if(self.Device == Device_SPI):
                     # self.RPI.digital_write(self._dc,True)
-                    self.RPI.spi_writebyte([self._buffer[i+self.width*page]]); 
+                    self.RPI.spi_writebyte([self._buffer[i+self.width*page]]) 
                 else :
                     self.RPI.i2c_writebyte(0x40, self._buffer[i+self.width*page])
 
