@@ -44,25 +44,25 @@ class airplay(DisplayPlugin):
                             try:
                                 artist = decoded_line.split('"')[1]
                                 self.metadata_queue.put(("artist", artist))
-                            except:
+                            except IndexError:
                                 pass
                         elif "Album" in decoded_line:
                             try:
                                 album = decoded_line.split('"')[1]
                                 self.metadata_queue.put(("album", album))
-                            except:
+                            except IndexError:
                                 pass
                         elif "Title" in decoded_line:
                             try:
                                 title = decoded_line.split('"')[1]
                                 self.metadata_queue.put(("title", title))
-                            except:
+                            except IndexError:
                                 pass
                         elif "Volume" in decoded_line:
                             try:
                                 volume = decoded_line.split('"')[1].strip()
                                 self.metadata_queue.put(("volume", volume))
-                            except:
+                            except IndexError:
                                 pass
                         elif "Play Session End." in decoded_line:
                             self.metadata_queue.put(("session_state", False))
@@ -77,7 +77,7 @@ class airplay(DisplayPlugin):
                             try:
                                 client_name = decoded_line.split('"')[1].strip()
                                 self.metadata_queue.put(("client_name", client_name))
-                            except:
+                            except IndexError:
                                 pass
                     else:
                         time.sleep(0.1)
