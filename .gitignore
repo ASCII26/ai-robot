@@ -39,3 +39,6 @@ roon_token
 # OS
 .DS_Store
 Thumbs.db 
+
+# Project
+config/cd/

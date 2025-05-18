@@ -14,6 +14,7 @@ PLUGIN_MODULES = {
     'life': importlib.import_module('screen.plugins.life'),
     'airplay': importlib.import_module('screen.plugins.airplay'),
     'roon': importlib.import_module('screen.plugins.roon'),
+    'cdplayer': importlib.import_module('screen.plugins.cdplayer'),
 }
 
 class PluginManager:

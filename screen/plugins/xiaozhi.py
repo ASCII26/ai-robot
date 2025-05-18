@@ -24,6 +24,8 @@ from ui.animation import Animation,Operator
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 
+USE_PULSE = False # 使用pulse音频，用于支持蓝牙音箱
+
 # 设备采样率
 DEVICE_RATE = 48000
 # 目标采样率
@@ -274,15 +276,18 @@ class xiaozhi(DisplayPlugin):
         
         try:
             # 使用arecord命令录制音频，使用设备采样率
-            arecord = subprocess.Popen([
+            cmd = [
                 'arecord',
+                '-D', 'pulse' if USE_PULSE else 'hw:1,0',   # 指定USB音频设备
                 '-f', 'S16_LE',  # 16位小端
                 '-r', str(DEVICE_RATE),  # 使用设备采样率
                 '-c', '1',       # 单声道
                 '-t', 'raw',     # 裸PCM流
-                '-q',            # 静默模式
-                '-D', 'hw:1,0'   # 指定USB音频设备
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                '-q'             # 静默模式
+            ]
+            LOGGER.debug(f"arecord cmd: {cmd}")
+            
+            arecord = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
             LOGGER.info(f"start recording with arecord, sample rate: {DEVICE_RATE}Hz")
             
@@ -330,15 +335,18 @@ class xiaozhi(DisplayPlugin):
         # 初始化Opus解码器
         decoder = opuslib.Decoder(fs=sample_rate, channels=1)
         # 使用更优化的aplay参数
-        spk = subprocess.Popen([
+        cmd = [
             'aplay',
+            '-D', 'pulse' if USE_PULSE else 'default',   # 指定USB音频设备
             '-f', 'S16_LE',  # 16位小端
             '-r', str(sample_rate),   # 使用实际采样率
             '-c', '1',       # 单声道
             '-t', 'raw',     # 裸PCM流
             '-B', '100000',  # 增加缓冲区大小
             '-q'             # 静默模式
-        ], stdin=subprocess.PIPE)
+        ]
+        LOGGER.debug(f"aplay cmd: {cmd}")
+        spk = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
         pcm_queue = queue.Queue(maxsize=100)  # 进一步增加队列大小
         self._audio_threads_running = True

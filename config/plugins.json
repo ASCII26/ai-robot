@@ -35,6 +35,12 @@
             "enabled": true,
             "auto_hide": false,
             "config": {}
+        },
+        {
+            "name": "cdplayer",
+            "enabled": true,
+            "auto_hide": false,
+            "config": {}
         }
     ]
 } 

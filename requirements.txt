@@ -18,3 +18,5 @@ numpy>=2.2.5  # 科学计算库
 scipy>=1.15.2  # 科学计算库
 cryptography>=41.0.1  # 加密库
 paho-mqtt>=2.1.0  # MQTT 库
+musicbrainzngs>=0.7  # MusicBrainz 库
+libdiscid>=2.0.0  # DiscID 库
