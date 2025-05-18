@@ -15,7 +15,7 @@ from until.device.input import ecodes
 MPV_SOCKET_PATH = "/tmp/mpv_socket"
 CD_DEVICE = "/dev/sr0"
 
-def safe_read_disc(timeout=10):
+def safe_read_disc(timeout=30):
     try:
         result = subprocess.run(
             ["python3", "until/device/disc_reader.py"],
@@ -421,13 +421,22 @@ class CD:
             LOGGER.info("read cd")
             self.read_status = "reading"
             self.disc = safe_read_disc()
+            # self.disc = {
+            #     "id": "We9o3Ox.OQxmuiYV1e9De8cFvZE-",
+            #     "toc": "1 12 194955 150 16300 32437 46900 65182 79672 94826 111690 128957 144907 159832 178687"
+            # }
+
+            if self.disc["toc"] == "":
+                self._no_disc()
+                return False
+            
             self.read_status = "readed"
             LOGGER.info("read cd done.")
-            
+
             #set default value
             _toc = self.disc['toc'].split(' ')
-            self.artist = "Unknown"
-            self.album = "Unknown Album"
+            self.artist = "Unknown Artist"
+            self.album = ""
             self.track_length = int(_toc[1])
             self.tracks = [[f"Track {i+1}", "Unknown"] for i in range(self.track_length)]
             self._is_cd_inserted=True
@@ -436,59 +445,70 @@ class CD:
             try:
                 LOGGER.info(f"load cd info from config/cd/{self.disc['id']}.json")
                 _cd_info = open(f"config/cd/{self.disc['id']}.json", "r").read()
-                self._set_info(json.loads(_cd_info))
+                self._fix_info(json.loads(_cd_info))
 
                 return True
             except FileNotFoundError as e:
                 LOGGER.error(f"load file error: {e}")
-                _cd_info = None
             
             #if cd info is not found, get cd info from musicbrainz
-            if _cd_info is None:
-                try:
-                    LOGGER.info(f"request {self.disc['id']} from musicbrainz")
-                    mb.set_useragent('muspi', '1.0', 'https://github.com/puterjam/muspi')
-                    _cd_info = mb.get_releases_by_discid(self.disc['id'], includes=["recordings", "artists"], cdstubs=False)
+            try:
+                LOGGER.info("request info from musicbrainz")
+                mb.set_useragent('muspi', '1.0', 'https://github.com/puterjam/muspi')
+                _cd_info = mb.get_releases_by_discid("-",toc=self.disc['toc'], includes=["recordings", "artists"], cdstubs=False)
 
-                    import os
-                    os.makedirs("config/cd", exist_ok=True)
-                    _cd_info = json.dumps(_cd_info)
-                    with open(f"config/cd/{self.disc['id']}.json", "w") as f:
-                        f.write(_cd_info)
-                    
-                    self._set_info(json.loads(_cd_info))
-                except mb.ResponseError as e:
-                    LOGGER.error(f"request {self.disc['id']} from musicbrainz error: {e}")
+                import os
+                os.makedirs("config/cd", exist_ok=True)
+                _cd_info = json.dumps(_cd_info)
+                with open(f"config/cd/{self.disc['id']}.json", "w") as f:
+                    f.write(_cd_info)
+                
+                self._fix_info(json.loads(_cd_info))
+            except mb.ResponseError as e:
+                LOGGER.error(f"request from musicbrainz error: {e}")
             
             return True
 
         except Exception as e:
-            self._is_cd_inserted = False
-            self.read_status = "nodisc"
-            threading.Timer(
-                5,
-                lambda: self.reset()
-            ).start()
+            LOGGER.error(f"load cd error: {e}")
+            self._no_disc()
             return False
+    
+    def _no_disc(self):
+        self._is_cd_inserted = False
+        self.read_status = "nodisc"
+        threading.Timer(
+            15,
+            lambda: self.reset()
+        ).start()
 
-    def _set_info(self, cd_info):
+    def _fix_info(self, cd_info):
         self._cd_info = cd_info
 
-        release = self._cd_info['disc']['release-list'][0]
+        for release in self._cd_info['release-list']:
+            artist = release['artist-credit-phrase']
+            album = release['title']
+            medium_list = release['medium-list']
+            medium_count = release['medium-count']
+            LOGGER.info(f"artist: {artist}, album: {album}")
 
-        self.artist = release['artist-credit-phrase']
-        self.album = release['title']
-        medium_list = release['medium-list']
-        medium_count = release['medium-count']
+            for disc_count in range(medium_count):
+                count = disc_count - 1
+                if medium_list[count]["format"] == "CD" and len(medium_list[count]['disc-list']) > 0:
+                    offset = ' '.join(str(x) for x in medium_list[count]['disc-list'][0]['offset-list'])
 
-        for disc_count in range(medium_count):
-            count = disc_count - 1
-            if medium_list[count]["format"] == "CD" and len(medium_list[count]['disc-list']) > 0:
-                if medium_list[count]['disc-list'][0]['id'] == self.disc['id']:
-                    self.track_length = medium_list[count]['track-count']
-                    self.tracks = [[track['recording']['title'], track['recording']['artist-credit'][0]["artist"]["name"]]
-                                    for track in medium_list[count]['track-list']]
-                    break
+                    if offset in self.disc['toc']:
+                        LOGGER.info(f"find cd info: {offset}")
+                        # self.disc['toc'] = self.disc['toc'].replace(offset, '')
+                        self.artist = artist
+                        self.album = album
+                        self.track_length = medium_list[count]['track-count']
+                        self.tracks = [[track['recording']['title'], track['recording']['artist-credit'][0]["artist"]["name"]]
+                                        for track in medium_list[count]['track-list']]
+                        
+                        return True #use cd info
+                    
+        return False #use unknown info
 
 # if __name__ == "__main__":
 #     mp = MediaPlayer()
