@@ -16,6 +16,9 @@ import logging
 import sys
 import select
 
+# 导入OLED显示模块
+from oled_display import oled_print, oled_status, init_oled, cleanup_oled
+
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 MAC_ADDR = 'b8:27:eb:01:7c:15'
 # {"mqtt":{"endpoint":"post-cn-apg3xckag01.mqtt.aliyuncs.com","client_id":"GID_test@@@cc_ba_97_20_b4_bc",
@@ -89,8 +92,8 @@ def get_ota_version():
                            "ip": "192.168.31.100", "mac": "b8:27:eb:01:7c:15"}}
 
     response = requests.post(OTA_VERSION_URL, headers=header, data=json.dumps(post_data))
-    print('=========================')
-    print(response.text)
+    oled_print("连接小智服务器成功")
+    oled_print(f"响应: {response.status_code}")
     logging.info(f"get version: {response}")
     mqtt_info = response.json()['mqtt']
 
@@ -129,7 +132,8 @@ def send_audio():
             input_device_index=None  # 使用默认输入设备
         )
         
-        print("音频输入流已启动，开始录音...")
+        oled_print("音频录制启动")
+        oled_status("录音中", listening=True)
         
         while True:
             if listen_state == "stop":
@@ -151,14 +155,15 @@ def send_audio():
                 sent = udp_socket.sendto(data, (server_ip, server_port))
                 
             except Exception as read_error:
-                print(f"读取音频数据错误: {read_error}")
+                oled_print(f"音频错误: {str(read_error)[:20]}")
                 time.sleep(0.01)
                 continue
                 
     except Exception as e:
-        print(f"send audio err: {e}")
+        oled_print(f"录音错误: {str(e)[:20]}")
     finally:
-        print("send audio exit()")
+        oled_print("录音结束")
+        oled_status("就绪")
         local_sequence = 0
         # 安全关闭音频流
         if mic and hasattr(mic, '_stream'):
@@ -167,7 +172,7 @@ def send_audio():
                     mic.stop_stream()
                 mic.close()
             except Exception as close_error:
-                print(f"关闭音频流错误: {close_error}")
+                oled_print(f"关闭音频流错误: {str(close_error)[:20]}")
         udp_socket = None
 
 
@@ -178,7 +183,7 @@ def recv_audio():
     sample_rate = aes_opus_info['audio_params']['sample_rate']
     frame_duration = aes_opus_info['audio_params']['frame_duration']
     frame_num = int(frame_duration / (1000 / sample_rate))
-    print(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
+    oled_print(f"音频接收: {sample_rate}Hz")
     
     # 初始化Opus解码器
     decoder = opuslib.Decoder(sample_rate, 1)
@@ -193,7 +198,8 @@ def recv_audio():
             frames_per_buffer=frame_num
         )
         
-        print("音频输出流已启动，等待接收...")
+        oled_print("等待AI回复")
+        oled_status("播放中", speaking=True)
         
         while True:
             try:
@@ -212,14 +218,15 @@ def recv_audio():
                 time.sleep(0.01)
                 continue
             except Exception as recv_error:
-                print(f"接收音频数据错误: {recv_error}")
+                oled_print(f"接收错误: {str(recv_error)[:20]}")
                 time.sleep(0.01)
                 continue
                 
     except Exception as e:
-        print(f"recv audio err: {e}")
+        oled_print(f"播放错误: {str(e)[:20]}")
     finally:
-        print("recv audio exit()")
+        oled_print("播放结束")
+        oled_status("就绪")
         # 安全关闭音频流
         if spk and hasattr(spk, '_stream'):
             try:
@@ -227,13 +234,13 @@ def recv_audio():
                     spk.stop_stream()
                 spk.close()
             except Exception as close_error:
-                print(f"关闭音频输出流错误: {close_error}")
+                oled_print(f"关闭输出流错误: {str(close_error)[:20]}")
         udp_socket = None
 
 
 def list_audio_devices():
     """列出可用的音频设备"""
-    print("\n=== 音频设备列表 ===")
+    oled_print("=== 音频设备 ===", False)
     info = audio.get_host_api_info_by_index(0)
     numdevices = info.get('deviceCount')
     
@@ -247,14 +254,13 @@ def list_audio_devices():
         if device_info.get('maxOutputChannels') > 0:
             output_devices.append((i, device_info.get('name')))
     
-    print("输入设备 (麦克风):")
-    for idx, name in input_devices:
-        print(f"  {idx}: {name}")
+    oled_print(f"输入设备: {len(input_devices)}个")
+    for idx, name in input_devices[:2]:  # 只显示前2个
+        oled_print(f"  {idx}: {name[:15]}")
     
-    print("输出设备 (扬声器):")  
-    for idx, name in output_devices:
-        print(f"  {idx}: {name}")
-    print("==================\n")
+    oled_print(f"输出设备: {len(output_devices)}个")
+    for idx, name in output_devices[:2]:  # 只显示前2个  
+        oled_print(f"  {idx}: {name[:15]}")
     
     return input_devices, output_devices
 
@@ -264,21 +270,21 @@ def test_audio_devices():
     input_devices, output_devices = list_audio_devices()
     
     if not input_devices:
-        print("❌ 未找到音频输入设备，请检查麦克风连接")
+        oled_print("❌ 未找到音频输入设备")
         return False
     
     if not output_devices:
-        print("❌ 未找到音频输出设备，请检查扬声器连接")
+        oled_print("❌ 未找到音频输出设备")
         return False
     
-    print("✅ 音频设备检测正常")
+    oled_print("✅ 音频设备正常")
     return True
 
 
 def on_message(client, userdata, message):
     global aes_opus_info, udp_socket, tts_state, recv_audio_thread, send_audio_thread
     msg = json.loads(message.payload)
-    print(f"recv msg: {msg}")
+    oled_print(f"收到消息: {msg['type']}")
     if msg['type'] == 'hello':
         aes_opus_info = msg
         udp_socket.connect((msg['udp']['server'], msg['udp']['port']))
@@ -296,18 +302,18 @@ def on_message(client, userdata, message):
             recv_audio_thread = threading.Thread(target=recv_audio)
             recv_audio_thread.start()
         else:
-            print("recv_audio_thread is alive")
+            oled_print("接收线程已运行")
         # 检查send_audio_thread线程是否启动
         if not send_audio_thread.is_alive():
             # 启动一个线程，用于发送音频数据
             send_audio_thread = threading.Thread(target=send_audio)
             send_audio_thread.start()
         else:
-            print("send_audio_thread is alive")
+            oled_print("发送线程已运行")
     if msg['type'] == 'tts':
         tts_state = msg['state']
     if msg['type'] == 'goodbye' and udp_socket and msg['session_id'] == aes_opus_info['session_id']:
-        print(f"recv good bye msg")
+        oled_print("会话结束")
         aes_opus_info['session_id'] = None
 
 
@@ -316,7 +322,7 @@ def on_connect(client, userdata, flags, rs, pr):
     # print(f"subscribe topic: {subscribe_topic}")
     # 订阅主题
     # client.subscribe(subscribe_topic)
-    print("connect to mqtt server")
+    oled_print("MQTT连接成功")
 
 
 def push_mqtt_msg(message):
@@ -393,15 +399,15 @@ def on_space_key_press(event):
         hello_msg = {"type": "hello", "version": 3, "transport": "udp",
                      "audio_params": {"format": "opus", "sample_rate": 16000, "channels": 1, "frame_duration": 60}}
         push_mqtt_msg(hello_msg)
-        print(f"send hello message: {hello_msg}")
+        oled_print("发送hello消息")
     if tts_state == "start" or tts_state == "entence_start":
         # 在播放状态下发送abort消息
         push_mqtt_msg({"type": "abort"})
-        print(f"send abort message")
+        oled_print("中断TTS播放")
     if aes_opus_info['session_id'] is not None:
         # 发送start listen消息
         msg = {"session_id": aes_opus_info['session_id'], "type": "listen", "state": "start", "mode": "manual"}
-        print(f"send start listen message: {msg}")
+        oled_print("开始监听")
         push_mqtt_msg(msg)
 
 
@@ -411,7 +417,7 @@ def on_space_key_release(event):
     # 发送stop listen消息
     if aes_opus_info['session_id'] is not None:
         msg = {"session_id": aes_opus_info['session_id'], "type": "listen", "state": "stop"}
-        print(f"send stop listen message: {msg}")
+        oled_print("停止监听")
         push_mqtt_msg(msg)
 
 
@@ -432,64 +438,65 @@ def on_space_key_release(event):
 # ============= 命令行控制函数 =============
 def command_line_control():
     """命令行控制函数"""
-    print("\n=== 小智 AI 命令行控制 ===")
-    print("输入命令:")
-    print("  start 或 s  - 开始语音识别")  
-    print("  stop 或 t   - 停止语音识别")
-    print("  quit 或 q   - 退出程序")
-    print("  help 或 h   - 显示帮助信息")
-    print("========================\n")
+    oled_print("=== 命令行控制 ===", False)
+    oled_print("命令: s-开始 t-停止 q-退出", False)
     
     while True:
         try:
-            cmd = input("请输入命令: ").strip().lower()
+            cmd = input("命令: ").strip().lower()
             
             if cmd in ['start', 's']:
-                print("开始语音识别...")
+                oled_print(">> 开始语音识别")
                 on_space_key_press(None)
                 
             elif cmd in ['stop', 't']:
-                print("停止语音识别...")
+                oled_print(">> 停止语音识别")
                 on_space_key_release(None)
                 
             elif cmd in ['quit', 'q']:
-                print("正在退出...")
+                oled_print(">> 正在退出...")
                 # 发送goodbye消息
                 if aes_opus_info.get('session_id'):
                     goodbye_msg = {"session_id": aes_opus_info['session_id'], "type": "goodbye"}
                     push_mqtt_msg(goodbye_msg)
-                    print("发送goodbye消息")
+                    oled_print("发送goodbye消息")
+                cleanup_oled()
                 sys.exit(0)
                 
             elif cmd in ['help', 'h']:
-                print("\n命令说明:")
-                print("  start/s - 开始录音，小智开始听你说话")
-                print("  stop/t  - 停止录音，小智处理并回复")  
-                print("  quit/q  - 退出程序")
-                print("  help/h  - 显示此帮助信息\n")
+                oled_print("=== 帮助信息 ===", False)
+                oled_print("s/start - 开始录音", False)
+                oled_print("t/stop  - 停止录音", False)
+                oled_print("q/quit  - 退出程序", False)
+                oled_print("h/help  - 显示帮助", False)
                 
             else:
-                print(f"未知命令: {cmd}，输入 'help' 查看可用命令")
+                oled_print(f"未知命令: {cmd}")
                 
         except (KeyboardInterrupt, EOFError):
-            print("\n正在退出...")
+            oled_print("键盘中断，退出")
+            cleanup_oled()
             sys.exit(0)
         except Exception as e:
-            print(f"命令处理错误: {e}")
+            oled_print(f"命令错误: {str(e)[:15]}")
 
 
 def run():
     global mqtt_info, mqttc
     
-    print("=== 小智 AI 初始化 ===")
+    # 初始化OLED显示
+    init_oled()
+    oled_status("初始化")
     
     # 检测音频设备
     if not test_audio_devices():
-        print("音频设备检测失败，程序退出")
+        oled_print("音频设备检测失败")
+        cleanup_oled()
         return
     
     # 获取mqtt与版本信息
-    print("正在连接小智服务器...")
+    oled_print("连接小智服务器...")
+    oled_status("连接中")
     get_ota_version()
     
     # ============= 键盘监听 (注释掉，后续接入键盘时启用) =============
@@ -511,12 +518,20 @@ def run():
     
     # 等待MQTT连接建立
     time.sleep(2)
-    print("MQTT连接已建立，可以开始使用命令行控制")
+    oled_print("系统就绪")
+    oled_status("就绪")
     
     # 启动命令行控制
     command_line_control()
 
 
 if __name__ == "__main__":
-    audio = pyaudio.PyAudio()
-    run()
+    try:
+        audio = pyaudio.PyAudio()
+        run()
+    except Exception as e:
+        oled_print(f"系统错误: {str(e)[:15]}")
+        cleanup_oled()
+    finally:
+        if audio:
+            audio.terminate()

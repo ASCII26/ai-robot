@@ -144,7 +144,7 @@ CACTUS_SPRITE_6 = [
 ]
 
 # 字体
-GAME_FONT8 = ImageFont.truetype("fonts/fusion-pixel-8px-proportional-zh_hans.ttf", 8)
+GAME_FONT8 = ImageFont.truetype("fonts/fusion-pixel-8px.ttf", 8)
 
 def get_dino_sprite(type):
     # 选择头部
