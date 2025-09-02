@@ -15,7 +15,7 @@ import logging
 from pynput import keyboard as pynput_keyboard
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
-MAC_ADDR = 'cd:62:f4:3d:b4:ba'
+MAC_ADDR = 'b8:27:eb:01:7c:15'
 # {"mqtt":{"endpoint":"post-cn-apg3xckag01.mqtt.aliyuncs.com","client_id":"GID_test@@@cc_ba_97_20_b4_bc",
 # "username":"Signature|LTAI5tF8J3CrdWmRiuTjxHbF|post-cn-apg3xckag01","password":"0mrkMFELXKyelhuYy2FpGDeCigU=",
 # "publish_topic":"device-server","subscribe_topic":"devices"},"firmware":{"version":"0.9.9","url":""}}
@@ -83,8 +83,8 @@ def get_ota_version():
                                      {"label": "ota_1", "type": 0, "subtype": 17, "address": 10485760,
                                       "size": 4194304}],
                  "ota": {"label": "factory"},
-                 "board": {"type": "bread-compact-wifi", "ssid": "mzy", "rssi": -58, "channel": 6,
-                           "ip": "192.168.124.38", "mac": "cc:ba:97:20:b4:bc"}}
+                 "board": {"type": "bread-compact-wifi", "ssid": "chuchu", "rssi": -58, "channel": 6,
+                           "ip": "192.168.31.100", "mac": "b8:27:eb:01:7c:15"}}
 
     response = requests.post(OTA_VERSION_URL, headers=header, data=json.dumps(post_data))
     print('=========================')
