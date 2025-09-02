@@ -17,7 +17,7 @@ import sys
 import select
 
 # 导入OLED显示模块
-from oled_display_fixed import oled_print, oled_status, init_oled, cleanup_oled
+from oled_display_simple import oled_print, oled_status, init_oled, cleanup_oled
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 MAC_ADDR = 'b8:27:eb:01:7c:15'
@@ -284,37 +284,50 @@ def test_audio_devices():
 def on_message(client, userdata, message):
     global aes_opus_info, udp_socket, tts_state, recv_audio_thread, send_audio_thread
     msg = json.loads(message.payload)
-    oled_print(f"收到消息: {msg['type']}")
+    
     if msg['type'] == 'hello':
+        oled_print("建立语音连接")
         aes_opus_info = msg
         udp_socket.connect((msg['udp']['server'], msg['udp']['port']))
-        # 发送 iot msg
-        # iot_msg['session_id'] = msg['session_id']
-        # push_mqtt_msg(iot_msg)
-        # print(f"send iot message: {iot_msg}")
-        # 发送 iot status消息
-        # iot_status_msg['session_id'] = msg['session_id']
-        # print(f"send iot status message: {iot_status_msg}")
-        # push_mqtt_msg(iot_status_msg)
         # 检查recv_audio_thread线程是否启动
         if not recv_audio_thread.is_alive():
-            # 启动一个线程，用于接收音频数据
             recv_audio_thread = threading.Thread(target=recv_audio)
             recv_audio_thread.start()
         else:
             oled_print("接收线程已运行")
         # 检查send_audio_thread线程是否启动
         if not send_audio_thread.is_alive():
-            # 启动一个线程，用于发送音频数据
             send_audio_thread = threading.Thread(target=send_audio)
             send_audio_thread.start()
         else:
             oled_print("发送线程已运行")
-    if msg['type'] == 'tts':
+            
+    elif msg['type'] == 'tts':
         tts_state = msg['state']
-    if msg['type'] == 'goodbye' and udp_socket and msg['session_id'] == aes_opus_info['session_id']:
-        oled_print("会话结束")
-        aes_opus_info['session_id'] = None
+        if msg['state'] == 'start':
+            # 显示AI回复的文本内容
+            if 'text' in msg:
+                oled_print(f"小智: {msg['text']}")
+            else:
+                oled_print("小智正在回复...")
+        elif msg['state'] == 'sentence_start':
+            # 如果是句子开始，也显示文本
+            if 'text' in msg:
+                oled_print(f"小智: {msg['text']}")
+                
+    elif msg['type'] == 'asr':
+        # 语音识别结果
+        if 'text' in msg:
+            oled_print(f"你说: {msg['text']}")
+            
+    elif msg['type'] == 'goodbye':
+        if udp_socket and msg.get('session_id') == aes_opus_info.get('session_id'):
+            oled_print("会话结束")
+            aes_opus_info['session_id'] = None
+            
+    else:
+        # 其他类型的消息，显示更多信息
+        oled_print(f"收到: {msg['type']}")
 
 
 def on_connect(client, userdata, flags, rs, pr):

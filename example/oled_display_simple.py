@@ -1,8 +1,7 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 """
-OLED显示管理器 - 修复版本
-解决GPIO冲突、字体加载和音频配置问题
+OLED显示管理器 - 参考game.py的简洁实现
 """
 import sys
 import os
@@ -11,10 +10,16 @@ import time
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-# 添加项目根目录到路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 添加驱动路径 - 参考game.py的方法
+current_dir = os.path.dirname(os.path.realpath(__file__))
+libdir = os.path.join(current_dir, "..", "drive")  # drive在上级目录
 
-# 简化的文本显示类（避免复杂的依赖）
+if os.path.exists(libdir):
+    sys.path.append(libdir)
+    
+from drive import SSD1305
+
+# 简化的文本显示类
 class SimpleTextArea:
     def __init__(self, width=108, height=24):
         self.width = width
@@ -22,36 +27,30 @@ class SimpleTextArea:
         self.lines = []
         self.max_lines = 3  # 最多显示3行
         
-        # 尝试加载字体，失败时使用默认字体
+        # 尝试加载字体 - 参考game.py的字体路径
         try:
-            # 尝试加载项目字体，使用更大的字体
-            font_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                   'assets/fonts/fusion-pixel-10px.ttf')
+            # 尝试使用相对路径加载字体
+            font_path = os.path.join(current_dir, "..", "assets", "fonts", "fusion-pixel-10px.ttf")
             if os.path.exists(font_path):
-                self.font = ImageFont.truetype(font_path, 10)  # 使用10px字体
+                self.font = ImageFont.truetype(font_path, 10)
             else:
-                # 尝试8px字体
-                font_path_8 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                         'assets/fonts/fusion-pixel-8px.ttf')
+                # 备用8px字体
+                font_path_8 = os.path.join(current_dir, "..", "assets", "fonts", "fusion-pixel-8px.ttf")
                 if os.path.exists(font_path_8):
                     self.font = ImageFont.truetype(font_path_8, 8)
                 else:
-                    # 使用系统默认字体，设置大一点
                     self.font = ImageFont.load_default()
         except Exception:
-            # 最后的备选方案
             self.font = ImageFont.load_default()
     
     def append_text(self, text):
         """添加新文本"""
-        # 简单换行处理 - 根据字体大小调整
-        max_chars = self.width // 8  # 调整为8像素每字符，适应更大字体
+        max_chars = self.width // 8
         if len(text) > max_chars:
             text = text[:max_chars-3] + "..."
         
         self.lines.append(text)
         
-        # 保持最大行数限制
         if len(self.lines) > self.max_lines:
             self.lines.pop(0)
     
@@ -61,7 +60,7 @@ class SimpleTextArea:
         draw = ImageDraw.Draw(image)
         
         y = 0
-        line_height = 10  # 增加行高，适应更大字体
+        line_height = 8
         for line in self.lines:
             if y + line_height <= self.height:
                 draw.text((2, y), line, font=self.font, fill=255)
@@ -75,48 +74,47 @@ class SimpleTextArea:
 
 class OLEDDisplay:
     def __init__(self, width=128, height=32):
-        """初始化OLED显示器"""
+        """初始化OLED显示器 - 参考game.py的简洁方式"""
         self.width = width
         self.height = height
         
-        # 全局实例管理 - 避免重复初始化
+        # 全局实例管理
         if hasattr(OLEDDisplay, '_instance'):
             raise RuntimeError("OLED显示器已经初始化，请使用get_oled()获取实例")
         OLEDDisplay._instance = self
         
-        # 初始化硬件 - 添加异常处理
-        self.disp = None
+        # 初始化显示屏 - 完全参考game.py
         try:
-            from drive.SSD1305 import SSD1305
-            self.disp = SSD1305()
+            self.disp = SSD1305.SSD1305()
             self.disp.Init()
-            # 设置180度旋转
             self.disp.set_screen_rotation(1)  # 180度旋转
             self.disp.clear()
             print("OLED硬件初始化成功，已设置180度旋转")
         except Exception as e:
             print(f"OLED硬件初始化失败: {e}")
-            print("将使用虚拟显示模式")
-            # 不退出，继续运行但不显示到硬件
+            self.disp = None
         
         # 初始化文本显示区域
-        self.text_area = SimpleTextArea(width=width-20, height=height-8)
+        self.text_area = SimpleTextArea(width=width-20, height=height-10)
         
-        # 尝试加载状态栏字体 - 使用更大的字体
+        # 加载状态栏字体
         try:
-            font_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                   'assets/fonts/fusion-pixel-8px.ttf')
+            font_path = os.path.join(current_dir, "..", "assets", "fonts", "fusion-pixel-8px.ttf")
             if os.path.exists(font_path):
-                self.status_font = ImageFont.truetype(font_path, 8)  # 增大状态栏字体
+                self.status_font = ImageFont.truetype(font_path, 8)
             else:
                 self.status_font = ImageFont.load_default()
         except Exception:
             self.status_font = ImageFont.load_default()
         
-        # 状态栏区域 (顶部8像素)
+        # 状态信息
         self.status_text = "小智AI"
         self.is_listening = False
         self.is_speaking = False
+        
+        # 主图像 - 参考game.py的方式
+        self.image = Image.new('1', (width, height))
+        self.draw = ImageDraw.Draw(self.image)
         
         # 显示更新线程
         self.running = True
@@ -124,7 +122,6 @@ class OLEDDisplay:
         self.update_thread.daemon = True
         self.update_thread.start()
         
-        # 显示欢迎信息
         self.show_welcome()
         
     def show_welcome(self):
@@ -133,7 +130,7 @@ class OLEDDisplay:
         self.println("正在初始化...", False)
         
     def println(self, text, timestamp=True):
-        """输出一行文本到OLED（类似print功能）"""
+        """输出一行文本到OLED"""
         if timestamp:
             time_str = datetime.now().strftime("%H:%M")
             display_text = f"[{time_str}] {text}"
@@ -141,8 +138,6 @@ class OLEDDisplay:
             display_text = text
             
         self.text_area.append_text(display_text)
-        
-        # 同时输出到控制台（用于调试）
         print(f"OLED: {display_text}")
         
     def set_status(self, status_text, listening=False, speaking=False):
@@ -155,62 +150,61 @@ class OLEDDisplay:
         """清空显示内容"""
         self.text_area.clear()
         
-    def _draw_status_bar(self, image):
-        """绘制状态栏"""
-        draw = ImageDraw.Draw(image)
+    def _draw_screen(self):
+        """绘制完整屏幕 - 参考game.py的绘制方式"""
+        # 清空画布
+        self.draw.rectangle((0, 0, self.width, self.height), fill=0)
         
-        # 绘制状态栏背景
-        draw.rectangle((0, 0, self.width-1, 7), outline=255, fill=0)
-        
-        # 绘制状态文本
-        draw.text((2, 0), self.status_text, font=self.status_font, fill=255)
+        # 绘制状态栏
+        self.draw.rectangle((0, 0, self.width-1, 9), outline=255, fill=0)
+        self.draw.text((2, 1), self.status_text, font=self.status_font, fill=255)
         
         # 绘制状态指示器
         if self.is_listening:
-            # 录音指示器 (红点闪烁效果)
-            if int(time.time() * 2) % 2:  # 每0.5秒闪烁
-                draw.ellipse((self.width-10, 1, self.width-4, 7), outline=255, fill=255)
-            draw.text((self.width-15, 0), "REC", font=self.status_font, fill=255)
-            
+            if int(time.time() * 2) % 2:  # 闪烁效果
+                self.draw.ellipse((self.width-12, 2, self.width-6, 8), outline=255, fill=255)
+            self.draw.text((self.width-20, 1), "REC", font=self.status_font, fill=255)
         elif self.is_speaking:
-            # 播放指示器
-            draw.text((self.width-15, 0), "PLAY", font=self.status_font, fill=255)
+            self.draw.text((self.width-25, 1), "PLAY", font=self.status_font, fill=255)
             
         # 绘制分隔线
-        draw.line((0, 7, self.width-1, 7), fill=255)
+        self.draw.line((0, 9, self.width-1, 9), fill=255)
+        
+        # 渲染并绘制文本区域
+        text_image = self.text_area.render()
+        # 将文本粘贴到主图像上（状态栏下方）
+        self.image.paste(text_image, (0, 10))
         
     def _display_loop(self):
-        """显示更新循环"""
+        """显示更新循环 - 参考game.py的帧率控制"""
+        frame_time = 1.0 / 10.0  # 10fps，降低CPU使用
+        
         while self.running:
             try:
-                # 创建主画面
-                main_image = Image.new('1', (self.width, self.height), 0)
+                frame_start = time.time()
                 
-                # 绘制状态栏
-                self._draw_status_bar(main_image)
-                
-                # 渲染文本区域
-                text_image = self.text_area.render()
-                # 将文本区域贴到主画面（状态栏下方）
-                main_image.paste(text_image, (0, 8))
+                # 绘制屏幕
+                self._draw_screen()
                 
                 # 更新到硬件显示
                 if self.disp:
                     try:
-                        self.disp.getbuffer(main_image)
+                        self.disp.getbuffer(self.image)
                         self.disp.ShowImage()
                     except Exception as e:
                         print(f"OLED显示更新错误: {e}")
-                        # 不退出循环，继续运行
                 
-                time.sleep(1/10)  # 10 FPS更新率，降低CPU使用
-                
+                # 帧率控制
+                elapsed = time.time() - frame_start
+                if elapsed < frame_time:
+                    time.sleep(frame_time - elapsed)
+                    
             except Exception as e:
                 print(f"OLED显示循环错误: {e}")
                 time.sleep(0.5)
                 
     def cleanup(self):
-        """清理资源"""
+        """清理资源 - 参考game.py的清理方式"""
         self.running = False
         if self.update_thread.is_alive():
             self.update_thread.join(timeout=1)
@@ -234,11 +228,9 @@ def init_oled():
         try:
             _oled_instance = OLEDDisplay()
         except RuntimeError:
-            # 如果已经有实例，直接返回
             _oled_instance = OLEDDisplay._instance
         except Exception as e:
             print(f"OLED初始化失败: {e}")
-            # 创建一个虚拟显示器继续运行
             _oled_instance = MockOLEDDisplay()
     return _oled_instance
 
@@ -256,7 +248,6 @@ def oled_print(text, timestamp=True):
         if hasattr(oled, 'println'):
             oled.println(text, timestamp)
         else:
-            # 回退到控制台输出
             if timestamp:
                 time_str = datetime.now().strftime("%H:%M")
                 print(f"[{time_str}] {text}")
@@ -289,13 +280,9 @@ def cleanup_oled():
         finally:
             _oled_instance = None
 
-# 虚拟OLED显示器（用于测试和调试）
+# 虚拟OLED显示器
 class MockOLEDDisplay:
-    """虚拟OLED显示器，只输出到控制台"""
     def __init__(self):
-        self.status_text = "小智AI"
-        self.is_listening = False
-        self.is_speaking = False
         print("使用虚拟OLED显示器")
     
     def println(self, text, timestamp=True):
@@ -306,9 +293,6 @@ class MockOLEDDisplay:
             print(f"虚拟OLED: {text}")
     
     def set_status(self, status_text, listening=False, speaking=False):
-        self.status_text = status_text
-        self.is_listening = listening
-        self.is_speaking = speaking
         status_str = []
         if listening: status_str.append("录音")
         if speaking: status_str.append("播放")

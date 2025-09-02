@@ -56,11 +56,17 @@ class SSD1305(object):
         self.command(0x40)#--Set Display Start Line
         self.command(0x81)#--Set Contrast Control for BANK0
         self.command(0x80)#--Contrast control register is set
-        self.command(0xA1)#--Set Segment Re-map (A1->A0 for 180° rotation)
+        # 默认设置(正常方向)
+        if self.rotation == 0:
+            self.command(0xA0)#--Set Segment Re-map (A0 for normal)
+            self.command(0xC0)#--Set COM Output Scan Direction (C0 for normal)
+        else:
+            self.command(0xA1)#--Set Segment Re-map (A1->A0 for 180° rotation)
+            self.command(0xC8)#--Set COM Output Scan Direction (C8->C0 for 180° rotation)
+        
         self.command(0xA6)#--Set Normal/Inverse Display
         self.command(0xA8)#--Set Multiplex Ratio
         self.command(0x1F)
-        self.command(0xC8)#--Set COM Output Scan Direction (C8->C0 for 180° rotation)
         self.command(0xD3)#--Set Display Offset
         self.command(0x00)
         self.command(0xD5)#--Set Display Clock Divide Ratio/ Oscillator Frequency
@@ -74,6 +80,12 @@ class SSD1305(object):
         self.command(0xDB)#--Set VCOMH Deselect Level
         self.command(0x08)#--Set VCOM Deselect Level
         self.command(0xAF)#--Normal Brightness Display ON
+
+    def set_screen_rotation(self, rotation):
+        """设置屏幕旋转 0=正常 1=180度旋转"""
+        self.rotation = rotation
+        # 重新初始化以应用旋转设置
+        self.Init()
 
     def reset(self):
         """Reset the display"""
