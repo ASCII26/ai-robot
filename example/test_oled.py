@@ -79,7 +79,7 @@ try:
         sys.exit(1)
     
     # 导入OLED显示模块
-    from oled_display import init_oled, oled_print, oled_status, cleanup_oled
+    from oled_display_fixed import init_oled, oled_print, oled_status, cleanup_oled
     
     def test_oled():
         print("开始OLED显示测试...")
