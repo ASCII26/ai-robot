@@ -12,7 +12,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from os import urandom
 import logging
-from pynput import keyboard as pynput_keyboard
+# from pynput import keyboard as pynput_keyboard  # 注释掉键盘控制，后续接入键盘时启用
+import sys
+import select
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 MAC_ADDR = 'b8:27:eb:01:7c:15'
@@ -322,26 +324,77 @@ def on_space_key_release(event):
         push_mqtt_msg(msg)
 
 
-def on_press(key):
-    if key == pynput_keyboard.Key.space:
-        on_space_key_press(None)
+# ============= 键盘控制函数 (注释掉，后续接入键盘时启用) =============
+# def on_press(key):
+#     if key == pynput_keyboard.Key.space:
+#         on_space_key_press(None)
 
 
-def on_release(key):
-    if key == pynput_keyboard.Key.space:
-        on_space_key_release(None)
-    # Stop listener
-    if key == pynput_keyboard.Key.esc:
-        return False
+# def on_release(key):
+#     if key == pynput_keyboard.Key.space:
+#         on_space_key_release(None)
+#     # Stop listener
+#     if key == pynput_keyboard.Key.esc:
+#         return False
+
+
+# ============= 命令行控制函数 =============
+def command_line_control():
+    """命令行控制函数"""
+    print("\n=== 小智 AI 命令行控制 ===")
+    print("输入命令:")
+    print("  start 或 s  - 开始语音识别")  
+    print("  stop 或 t   - 停止语音识别")
+    print("  quit 或 q   - 退出程序")
+    print("  help 或 h   - 显示帮助信息")
+    print("========================\n")
+    
+    while True:
+        try:
+            cmd = input("请输入命令: ").strip().lower()
+            
+            if cmd in ['start', 's']:
+                print("开始语音识别...")
+                on_space_key_press(None)
+                
+            elif cmd in ['stop', 't']:
+                print("停止语音识别...")
+                on_space_key_release(None)
+                
+            elif cmd in ['quit', 'q']:
+                print("正在退出...")
+                # 发送goodbye消息
+                if aes_opus_info.get('session_id'):
+                    goodbye_msg = {"session_id": aes_opus_info['session_id'], "type": "goodbye"}
+                    push_mqtt_msg(goodbye_msg)
+                    print("发送goodbye消息")
+                sys.exit(0)
+                
+            elif cmd in ['help', 'h']:
+                print("\n命令说明:")
+                print("  start/s - 开始录音，小智开始听你说话")
+                print("  stop/t  - 停止录音，小智处理并回复")  
+                print("  quit/q  - 退出程序")
+                print("  help/h  - 显示此帮助信息\n")
+                
+            else:
+                print(f"未知命令: {cmd}，输入 'help' 查看可用命令")
+                
+        except (KeyboardInterrupt, EOFError):
+            print("\n正在退出...")
+            sys.exit(0)
+        except Exception as e:
+            print(f"命令处理错误: {e}")
 
 
 def run():
     global mqtt_info, mqttc
     # 获取mqtt与版本信息
     get_ota_version()
-    # 监听键盘按键，当按下空格键时，发送listen消息
-    listener = pynput_keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.start()
+    
+    # ============= 键盘监听 (注释掉，后续接入键盘时启用) =============
+    # listener = pynput_keyboard.Listener(on_press=on_press, on_release=on_release)
+    # listener.start()
     
     # 创建客户端实例
     mqttc = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id=mqtt_info['client_id'])
@@ -350,8 +403,18 @@ def run():
                   tls_version=mqtt.ssl.PROTOCOL_TLS, ciphers=None)
     mqttc.on_connect = on_connect
     mqttc.on_message = on_message
-    mqttc.connect(host=mqtt_info['endpoint'], port=8883)
-    mqttc.loop_forever()
+    
+    # 在后台线程中启动MQTT
+    mqtt_thread = threading.Thread(target=lambda: mqttc.connect(host=mqtt_info['endpoint'], port=8883) or mqttc.loop_forever())
+    mqtt_thread.daemon = True
+    mqtt_thread.start()
+    
+    # 等待MQTT连接建立
+    time.sleep(2)
+    print("MQTT连接已建立，可以开始使用命令行控制")
+    
+    # 启动命令行控制
+    command_line_control()
 
 
 if __name__ == "__main__":
