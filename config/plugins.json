@@ -23,24 +23,6 @@
             "enabled": false,
             "auto_hide": false,
             "config": {}
-        },
-        {
-            "name": "airplay",
-            "enabled": true,
-            "auto_hide": true,
-            "config": {}
-        },
-        {
-            "name": "roon",
-            "enabled": true,
-            "auto_hide": false,
-            "config": {}
-        },
-        {
-            "name": "cdplayer",
-            "enabled": true,
-            "auto_hide": false,
-            "config": {}
         }
     ]
 } 
