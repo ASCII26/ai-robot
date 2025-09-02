@@ -17,7 +17,7 @@ import sys
 import select
 
 # 导入OLED显示模块
-from oled_display import oled_print, oled_status, init_oled, cleanup_oled
+from oled_display_fixed import oled_print, oled_status, init_oled, cleanup_oled
 
 OTA_VERSION_URL = 'https://api.tenclass.net/xiaozhi/ota/'
 MAC_ADDR = 'b8:27:eb:01:7c:15'
