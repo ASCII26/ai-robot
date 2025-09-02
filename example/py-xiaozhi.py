@@ -116,35 +116,59 @@ def send_audio():
     server_port = aes_opus_info['udp']['port']
     # 初始化Opus编码器
     encoder = opuslib.Encoder(16000, 1, opuslib.APPLICATION_AUDIO)
-    # 打开麦克风流, 帧大小，应该与Opus帧大小匹配
-    mic = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=960)
+    
+    mic = None
     try:
+        # 打开麦克风流，增加缓冲区大小以避免溢出
+        mic = audio.open(
+            format=pyaudio.paInt16, 
+            channels=1, 
+            rate=16000, 
+            input=True, 
+            frames_per_buffer=1920,  # 增加缓冲区大小
+            input_device_index=None  # 使用默认输入设备
+        )
+        
+        print("音频输入流已启动，开始录音...")
+        
         while True:
             if listen_state == "stop":
-                continue
                 time.sleep(0.1)
-            # 读取音频数据
-            data = mic.read(960)
-            # 编码音频数据
-            encoded_data = encoder.encode(data, 960)
-            # 打印音频数据
-            # print(f"Encoded data: {len(encoded_data)}")
-            # nonce插入data.size local_sequence_
-            local_sequence += 1
-            new_nonce = nonce[0:4] + format(len(encoded_data), '04x') + nonce[8:24] + format(local_sequence, '08x')
-            # 加密数据，添加nonce
-            encrypt_encoded_data = aes_ctr_encrypt(bytes.fromhex(key), bytes.fromhex(new_nonce), bytes(encoded_data))
-            data = bytes.fromhex(new_nonce) + encrypt_encoded_data
-            sent = udp_socket.sendto(data, (server_ip, server_port))
+                continue
+                
+            try:
+                # 读取音频数据，添加异常处理
+                data = mic.read(960, exception_on_overflow=False)  # 忽略溢出
+                # 编码音频数据
+                encoded_data = encoder.encode(data, 960)
+                
+                # nonce插入data.size local_sequence_
+                local_sequence += 1
+                new_nonce = nonce[0:4] + format(len(encoded_data), '04x') + nonce[8:24] + format(local_sequence, '08x')
+                # 加密数据，添加nonce
+                encrypt_encoded_data = aes_ctr_encrypt(bytes.fromhex(key), bytes.fromhex(new_nonce), bytes(encoded_data))
+                data = bytes.fromhex(new_nonce) + encrypt_encoded_data
+                sent = udp_socket.sendto(data, (server_ip, server_port))
+                
+            except Exception as read_error:
+                print(f"读取音频数据错误: {read_error}")
+                time.sleep(0.01)
+                continue
+                
     except Exception as e:
         print(f"send audio err: {e}")
     finally:
         print("send audio exit()")
         local_sequence = 0
+        # 安全关闭音频流
+        if mic and hasattr(mic, '_stream'):
+            try:
+                if mic._is_running:
+                    mic.stop_stream()
+                mic.close()
+            except Exception as close_error:
+                print(f"关闭音频流错误: {close_error}")
         udp_socket = None
-        # 关闭流和PyAudio
-        mic.stop_stream()
-        mic.close()
 
 
 def recv_audio():
@@ -155,33 +179,100 @@ def recv_audio():
     frame_duration = aes_opus_info['audio_params']['frame_duration']
     frame_num = int(frame_duration / (1000 / sample_rate))
     print(f"recv audio: sample_rate -> {sample_rate}, frame_duration -> {frame_duration}, frame_num -> {frame_num}")
-    # 初始化Opus编码器
+    
+    # 初始化Opus解码器
     decoder = opuslib.Decoder(sample_rate, 1)
-    spk = audio.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True, frames_per_buffer=frame_num)
+    spk = None
+    
     try:
+        spk = audio.open(
+            format=pyaudio.paInt16, 
+            channels=1, 
+            rate=sample_rate, 
+            output=True, 
+            frames_per_buffer=frame_num
+        )
+        
+        print("音频输出流已启动，等待接收...")
+        
         while True:
-            data, server = udp_socket.recvfrom(4096)
-            # print(f"Received from server {server}: {len(data)}")
-            encrypt_encoded_data = data
-            # 解密数据,分离nonce
-            split_encrypt_encoded_data_nonce = encrypt_encoded_data[:16]
-            # 十六进制格式打印nonce
-            # print(f"split_encrypt_encoded_data_nonce: {split_encrypt_encoded_data_nonce.hex()}")
-            split_encrypt_encoded_data = encrypt_encoded_data[16:]
-            decrypt_data = aes_ctr_decrypt(bytes.fromhex(key),
-                                           split_encrypt_encoded_data_nonce,
-                                           split_encrypt_encoded_data)
-            # 解码播放音频数据
-            spk.write(decoder.decode(decrypt_data, frame_num))
-    # except BlockingIOError:
-    #     # 无数据时短暂休眠以减少CPU占用
-    #     time.sleep(0.1)
+            try:
+                data, server = udp_socket.recvfrom(4096)
+                # 解密数据,分离nonce
+                split_encrypt_encoded_data_nonce = data[:16]
+                split_encrypt_encoded_data = data[16:]
+                decrypt_data = aes_ctr_decrypt(bytes.fromhex(key),
+                                               split_encrypt_encoded_data_nonce,
+                                               split_encrypt_encoded_data)
+                # 解码播放音频数据
+                decoded_audio = decoder.decode(decrypt_data, frame_num)
+                spk.write(decoded_audio)
+                
+            except socket.timeout:
+                time.sleep(0.01)
+                continue
+            except Exception as recv_error:
+                print(f"接收音频数据错误: {recv_error}")
+                time.sleep(0.01)
+                continue
+                
     except Exception as e:
         print(f"recv audio err: {e}")
     finally:
+        print("recv audio exit()")
+        # 安全关闭音频流
+        if spk and hasattr(spk, '_stream'):
+            try:
+                if spk._is_running:
+                    spk.stop_stream()
+                spk.close()
+            except Exception as close_error:
+                print(f"关闭音频输出流错误: {close_error}")
         udp_socket = None
-        spk.stop_stream()
-        spk.close()
+
+
+def list_audio_devices():
+    """列出可用的音频设备"""
+    print("\n=== 音频设备列表 ===")
+    info = audio.get_host_api_info_by_index(0)
+    numdevices = info.get('deviceCount')
+    
+    input_devices = []
+    output_devices = []
+    
+    for i in range(0, numdevices):
+        device_info = audio.get_device_info_by_host_api_device_index(0, i)
+        if device_info.get('maxInputChannels') > 0:
+            input_devices.append((i, device_info.get('name')))
+        if device_info.get('maxOutputChannels') > 0:
+            output_devices.append((i, device_info.get('name')))
+    
+    print("输入设备 (麦克风):")
+    for idx, name in input_devices:
+        print(f"  {idx}: {name}")
+    
+    print("输出设备 (扬声器):")  
+    for idx, name in output_devices:
+        print(f"  {idx}: {name}")
+    print("==================\n")
+    
+    return input_devices, output_devices
+
+
+def test_audio_devices():
+    """测试音频设备"""
+    input_devices, output_devices = list_audio_devices()
+    
+    if not input_devices:
+        print("❌ 未找到音频输入设备，请检查麦克风连接")
+        return False
+    
+    if not output_devices:
+        print("❌ 未找到音频输出设备，请检查扬声器连接")
+        return False
+    
+    print("✅ 音频设备检测正常")
+    return True
 
 
 def on_message(client, userdata, message):
@@ -389,7 +480,16 @@ def command_line_control():
 
 def run():
     global mqtt_info, mqttc
+    
+    print("=== 小智 AI 初始化 ===")
+    
+    # 检测音频设备
+    if not test_audio_devices():
+        print("音频设备检测失败，程序退出")
+        return
+    
     # 获取mqtt与版本信息
+    print("正在连接小智服务器...")
     get_ota_version()
     
     # ============= 键盘监听 (注释掉，后续接入键盘时启用) =============
